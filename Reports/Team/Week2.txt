@@ -1,0 +1,85 @@
+Project status Report
+Project Summary
+Report date
+Team Name:
+Prepared for:
+1/23/2026
+SoccerShare
+Week 2
+
+Status Summary/Completed Activities
+Held meeting with Advisor to provide updates
+Created GitHub repository with protected main branch
+Activities in Progress
+Task
+% Done
+Due date
+Person Responsible
+Notes
+Create Repo
+100%
+1/23/26
+Eric
+Successfully Created Repo
+Create Team Contract
+100%
+1/19/26
+Eric, Jayden, Max
+Collaborated to write a team contract, signed by everyone
+
+
+
+
+
+
+
+
+
+
+
+Activities Planned for Next Week 
+Task
+Person Responsible
+
+
+
+
+Notes
+Figma/Powerpoint
+All
+
+
+
+
+Create Figma/Powerpoint to showcase our idea to clients and prepare UI
+Project Proposal
+All
+
+
+
+
+Complete Project Proposal by due date
+
+
+
+
+
+
+
+
+
+
+
+Risk and issue history
+Issue
+Mitigation Plan
+
+
+N/A
+N/A
+
+
+
+Did your team meet with your faculty advisor this week? Yes/No. 
+NExt Scheduled Meeting with your advisor_2/4__
+*At the end of each week email form to advisor and turn in on Canvas.
