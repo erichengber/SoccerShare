@@ -1,0 +1,23 @@
+SoccerShare
+Eric Hengber
+Week 4 Individual Report
+
+Time Dedicated to the Project:
+The total hours or days you allocated for different phases (planning, research, implementation, testing)
+3 hours dedicated this week for planning
+How you managed your schedule to ensure progress
+Stayed organized and prioritized work to ensure everything got done
+The consistency and commitment shown in working on the project
+Provided updates in our group chat on completed work and what else needed to be done
+Made sure all tasks were completed by due date including reports and project proposal
+
+Contribution to the Project Development Process:
+Created and completed Figma for the UX of our project and presented to advisor
+Edited Powerpoint presentation for advisor to make more aesthetically pleasing
+
+Demonstration of Applied Knowledge:
+Designed UX prototype based on knowledge and theories from UXD course
+
+Reflection and Lessons Learned:
+This week was helpful in our final stages of planning before getting started on development. By creating a Figma and showing our advisor, we were able to further understand how we would design the project. We also created a pitch presentation to walk through why our solution works compared to other ones on the market. This has made us feel confident in beginning development on our project. 
+
