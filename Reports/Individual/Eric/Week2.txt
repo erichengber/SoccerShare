@@ -1,0 +1,22 @@
+Team Soccer
+Eric Hengber
+Week 2 Individual Report
+
+Time Dedicated to the Project:
+The total hours or days you allocated for different phases (planning, research, implementation, testing)
+3 hours dedicated this week
+How you managed your schedule to ensure progress
+Stayed organized and prioritized work to ensure everything got done
+The consistency and commitment shown in working on the project
+Provided updates in our group chat when tasks were complete
+
+Contribution to the Project Development Process:
+Created GitHub repository with protected branch
+Contributed to planning conversations about how we want to structure our project on our weekly call
+
+Demonstration of Applied Knowledge:
+Applied Agile scrum methodology to our project development process
+Used problem solving skills to help plan project structure with frameworks and stack
+
+Reflection and Lessons Learned:
+This week was a great start to our project as we continued planning the frameworks and stack we would like to use as well as the overall structure of our website. Meeting with our advisor provided clarity and help as she gave us valuable advice on how we should approach our process. This included creating a Powerpoint for us to showcase our idea to a soccer coach so he can provide feedback. 
