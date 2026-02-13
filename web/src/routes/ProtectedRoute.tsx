@@ -11,7 +11,7 @@ export function ProtectedRoute({ allow }: ProtectedRouteProps) {
   const { selectedRole, selectedUserId } = useAuthStore();
 
   if (!selectedRole || !selectedUserId) {
-    return <Navigate replace to="/select-role" />;
+    return <Navigate replace to="/login" />;
   }
 
   if (!allow.includes(selectedRole)) {

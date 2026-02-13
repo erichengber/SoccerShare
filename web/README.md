@@ -21,7 +21,7 @@ npm run dev
 
 ## Routes
 
-- Public: `/`, `/select-role`
+- Public: `/`, `/login`, `/register`, `/select-role`
 - Player: `/player`, `/player/profile`, `/player/clips`, `/player/clips/:clipId`, `/player/schedule`, `/player/settings/privacy`
 - Parent: `/parent`, `/parent/players`, `/parent/players/:playerId`
 - Coach: `/coach`, `/coach/roster`, `/coach/players/:playerId`, `/coach/schedule`
@@ -39,6 +39,10 @@ npm run dev
 
 ## Supabase Integration Points
 
+- `src/lib/authClient.ts`
+  - `loginWithPassword`
+  - `registerWithPassword`
+  - Contains handoff notes for replacing mock auth with Supabase Auth + profiles table linkage.
 - `src/store/dataStore.ts`
   - `uploadClip`
   - `updateClip`
