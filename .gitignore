@@ -22,6 +22,9 @@ web/yarn-error.log*
 web/pnpm-debug.log*
 web/lerna-debug.log*
 
+# Public assets
+web/public/
+
 # Local environment files (keep templates like .env.example tracked)
 web/.env
 web/.env.*
