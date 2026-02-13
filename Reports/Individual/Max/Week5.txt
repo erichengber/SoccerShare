@@ -1,0 +1,22 @@
+Team Soccer
+Max Martin
+Week 5 Individual Report
+
+Time Dedicated to the Project:
+
+This week I spent around 3 hours where I helped make core development towards completing the product as well as creating the Supabase
+
+Contribution to the Project Development Process:
+
+This week I helped create the Supabase and create features to ensure a smooth process of future database development
+
+Demonstration of Applied Knowledge:
+
+I demonstrated applied knowledge by using my knowledge of technology such a Typescript and Supabase connections. This resulted in a smooth process allowing future developments to occur. 
+
+Reflection and Lessons Learned:
+
+After connecting the Supabase I learned It's best to slow down and understand what I am doing for strong lessons learned when developing.
+
+
+
