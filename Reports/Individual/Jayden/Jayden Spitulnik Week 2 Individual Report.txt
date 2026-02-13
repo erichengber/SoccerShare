@@ -1,0 +1,8 @@
+Time Dedicated to the Project
+	•	This week I have committed 3 hours to the project. In the early stages we have met with our sponsor, met as just a team, and have spent time planning the outline and the roadmap of this project
+Contribution to the Project Development Process
+	•	I have contributed to this project so far but helping write the team contract, participated in the sponsor meeting by asking our sponsor clarifying questions, and I have helped plan out the first steps of our project of creating a powerpoint and a figma design.
+Demonstration of Applied Knowledge
+	•	I have demonstrated my knowledge to this project so far by recommending that we use supabase as our cloud database as it provides many features such as image store, authentication, and uses a relational SQL database as opposed to firebase which is non-relational. Our projects data will be relational so it is important that we have a platform that supports our needs.
+Reflection and Lessons Learned
+	•	I think that this week went well. A challenge was figuring our a consistent schedule between us and the sponsor as we are all very busy but we were able to find a time that works for all four of us. As a team, writing the contract went well as we have all worked together before and we know each other's strengths and weaknesses.

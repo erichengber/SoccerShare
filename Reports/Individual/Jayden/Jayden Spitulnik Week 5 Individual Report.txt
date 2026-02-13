@@ -1,0 +1,8 @@
+Time Dedicated to the Project
+	•	This week I have committed 3 hours to the project. I built out the boilerplate of our initial website, hard coding everything and using local assets so that we have a proof of concept.
+Contribution to the Project Development Process
+	•	I have contributed to this project so far by building out the initial typescript react next project and building the boilerplate. This gave our team a good foundation to build off of for future sprints.
+Demonstration of Applied Knowledge
+	•	I have demonstrated my knowledge of this project so far by developing the boilerplate of our project. This includes a complete hard coded demo with local assets so that we can understand the flow of the entire project and then focus on individual features when continuing development.
+Reflection and Lessons Learned
+	•	This week I learned that AI can be used to get a good starting point. I used codex to help me develop a fully detailed prompt, having it ask clarifying questions so that we can get our project to a starting point. With its help I was able to develop the first sprint.
