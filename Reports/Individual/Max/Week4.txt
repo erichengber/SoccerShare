@@ -1,0 +1,22 @@
+Team Soccer
+Max Martin
+Week 4 Individual Report
+
+Time Dedicated to the Project:
+
+This week I spent around 3 hours where I helped finalize the Figma design and Powerpoint. This week we also met with the advisor to demonstrate the app design, figma, and powerpoint 
+
+Contribution to the Project Development Process:
+
+This week I helped finalize the Figma design and Powerpoint. I helped present the app design, figma, and Powerpoint to the advisor.
+
+Demonstration of Applied Knowledge:
+
+I demonstrated applied knowledge by using my knowledge of technology such as Figma and Powerpoint to help create an MVP. This resulted in the success of demonstrating the presentation to the advisor
+
+Reflection and Lessons Learned:
+
+We learned that the Figma is a good place to start when creating a full stack application. The Figma is going to be useful when creating the user interface for the project.
+
+
+
