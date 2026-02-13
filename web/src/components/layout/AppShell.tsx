@@ -56,7 +56,7 @@ export function AppShell() {
             </div>
             <Button onClick={clearSession} size="sm" variant="outline">
               <LogOut className="h-4 w-4" />
-              Switch Role
+              Log Out
             </Button>
           </div>
         </div>

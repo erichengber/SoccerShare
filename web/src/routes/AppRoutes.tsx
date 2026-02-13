@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { LandingPage } from "@/pages/public/LandingPage";
+import { LoginPage } from "@/pages/public/LoginPage";
+import { RegisterPage } from "@/pages/public/RegisterPage";
 import { SelectRolePage } from "@/pages/public/SelectRolePage";
 import { PlayerOverviewPage } from "@/pages/player/PlayerOverviewPage";
 import { PlayerProfilePage } from "@/pages/player/PlayerProfilePage";
@@ -27,6 +29,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<LandingPage />} path="/" />
+      <Route element={<LoginPage />} path="/login" />
+      <Route element={<RegisterPage />} path="/register" />
       <Route element={<SelectRolePage />} path="/select-role" />
 
       <Route element={<ProtectedRoute allow={["player"]} />}>

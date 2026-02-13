@@ -17,7 +17,10 @@ export function LandingPage() {
           </p>
           <div className="mt-8 flex gap-3">
             <Button asChild size="lg">
-              <Link to="/select-role">Launch Demo</Link>
+              <Link to="/login">Login</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link to="/register">Register</Link>
             </Button>
           </div>
         </section>
