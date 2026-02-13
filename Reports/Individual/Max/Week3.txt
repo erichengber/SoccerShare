@@ -1,0 +1,22 @@
+Team Soccer
+Max Martin
+Week 3 Individual Report
+
+Time Dedicated to the Project:
+
+This week I spent 3 hours on the project meeting with the team and completing the project proposal. I ensured progress was made by setting set time with the team to discuss next steps. Recurring meets has been used in order to ensure consistency and commitment
+
+Contribution to the Project Development Process:
+
+The project proposal being finished defines the contribution toward the project development. The MVP draft of the UI design is being created now in Figma and is going to be the primary goal of next week.
+
+Demonstration of Applied Knowledge:
+
+Choosing the design framework was from our teams use of Figma technology before. We plan on applying this knowledge in the creation of the UI next week.
+
+Reflection and Lessons Learned:
+
+We succeeded on the completion of project proposal and the creation of the GitHub and deciding our backlog items and the next steps to creating the Figma design to show our advisor to define scope.
+
+
+
