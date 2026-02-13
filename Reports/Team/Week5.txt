@@ -1,0 +1,92 @@
+Project status Report
+Project Summary
+Report date
+Team Name:
+Prepared for:
+2/13/2026
+SoccerShare
+Week 5
+
+Status Summary/Completed Activities
+Completed Sprint 1
+Created starter AI boilerplate code to build off of
+Linked Supabase database
+Completed Presentation 1
+Task
+% Done
+Due date
+Person Responsible
+Notes
+Finished Sprint 1
+100%
+2/13/26
+All
+
+
+Finished Presentation 1
+100%
+2/13/26
+All
+
+
+
+
+
+
+
+
+
+
+
+
+
+Activities Planned for Next Week 
+Task
+Person Responsible
+
+
+
+
+Notes
+Start Sprint 2
+All
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Risk and issue history
+Issue
+Mitigation Plan
+
+
+N/A
+N/A
+
+
+
+Did your team meet with your faculty advisor this week? Yes/No. 
+NExt Scheduled Meeting with your advisor_2/18__
+*At the end of each week email form to advisor and turn in on Canvas.
