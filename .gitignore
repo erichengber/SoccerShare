@@ -1,0 +1,53 @@
+# ------------------------------------------------------------
+# SoccerShare (web/) - Vite + React + TypeScript
+# ------------------------------------------------------------
+
+# Dependencies
+web/node_modules/
+
+# Build outputs
+web/dist/
+web/dist-ssr/
+web/build/
+
+# Vite cache
+web/.vite/
+
+# Logs
+web/logs/
+web/*.log
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/pnpm-debug.log*
+web/lerna-debug.log*
+
+# Local environment files (keep templates like .env.example tracked)
+web/.env
+web/.env.*
+!web/.env.example
+!web/.env.*.example
+
+# TypeScript / tooling caches
+web/.tsbuildinfo
+web/.eslintcache
+
+# Test coverage
+web/coverage/
+
+# IDEs / editors
+web/.idea/
+web/.vscode/
+web/*.iml
+
+# OS files
+.DS_Store
+web/.DS_Store
+
+# ------------------------------------------------------------
+# Optional: if you ever add local HTTPS certs
+# ------------------------------------------------------------
+# web/*.pem
+# web/*.crt
+# web/*.key
+
