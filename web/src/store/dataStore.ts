@@ -19,7 +19,9 @@ export const useDataStore = create<DataState>((set) => ({
         ...input
       };
 
-      // Future Supabase integration point: replace in-memory append with insert RPC/API call.
+      // Future Supabase integration point:
+      // 1) Upload local file to Supabase Storage and capture the public/signed URL.
+      // 2) Persist clip metadata row instead of in-memory append.
       return {
         data: {
           ...state.data,

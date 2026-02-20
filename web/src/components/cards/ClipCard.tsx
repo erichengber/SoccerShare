@@ -26,7 +26,13 @@ export function ClipCard({
 }: ClipCardProps) {
   return (
     <Card className="overflow-hidden">
-      <img alt={clip.title} className="h-44 w-full object-cover" src={clip.posterUrl} />
+      {clip.posterUrl ? (
+        <img alt={clip.title} className="h-44 w-full object-cover" src={clip.posterUrl} />
+      ) : (
+        <div className="flex h-44 w-full items-center justify-center bg-muted text-sm text-muted-foreground">
+          No preview image
+        </div>
+      )}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div>

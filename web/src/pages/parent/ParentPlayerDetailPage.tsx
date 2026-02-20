@@ -66,7 +66,6 @@ export function ParentPlayerDetailPage() {
           onSubmit={uploadClip}
           open={isUploadModalOpen}
           player={player}
-          sampleVideos={data.sampleVideos}
           tournaments={data.tournaments}
         />
       ) : null}
