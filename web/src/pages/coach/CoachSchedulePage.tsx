@@ -1,19 +1,49 @@
+import { useEffect, useState } from "react";
 import { GameCard } from "@/components/cards/GameCard";
 import { TournamentCard } from "@/components/cards/TournamentCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import { getTeamName } from "@/lib/selectors";
 
 export function CoachSchedulePage() {
   const { selectedUserId } = useAuthStore();
-  const { data } = useDataStore();
+  const { data, addCoachGame } = useDataStore();
+  const [opponentTeamId, setOpponentTeamId] = useState("");
+  const [date, setDate] = useState("");
+  const [location, setLocation] = useState("");
+  const [homeOrAway, setHomeOrAway] = useState<"home" | "away">("home");
+  const [tournamentId, setTournamentId] = useState<string>("none");
+  const [gameMessage, setGameMessage] = useState<string>();
 
   const coach = data.coaches.find((entry) => entry.id === selectedUserId);
   if (!coach) {
     return <EmptyState description="Select a valid coach demo user." title="Coach not found" />;
   }
+
+  const opponentTeams = data.teams.filter((team) => team.id !== coach.teamId);
+
+  useEffect(() => {
+    if (!opponentTeams.length) {
+      setOpponentTeamId("");
+      return;
+    }
+
+    if (!opponentTeams.some((team) => team.id === opponentTeamId)) {
+      setOpponentTeamId(opponentTeams[0].id);
+    }
+  }, [opponentTeamId, opponentTeams]);
 
   const games = data.games.filter(
     (game) => game.homeTeamId === coach.teamId || game.awayTeamId === coach.teamId
@@ -26,6 +56,98 @@ export function CoachSchedulePage() {
   return (
     <div>
       <PageHeader description="Upcoming and linked tournament matches for your team." title="Team Schedule" />
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Add Game to Schedule</CardTitle>
+          <CardDescription>Create a team game directly from the coach workflow.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Opponent</p>
+            <Select onValueChange={setOpponentTeamId} value={opponentTeamId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select opponent" />
+              </SelectTrigger>
+              <SelectContent>
+                {opponentTeams.map((team) => (
+                  <SelectItem key={team.id} value={team.id}>
+                    {team.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Home or Away</p>
+            <Select
+              onValueChange={(value) => setHomeOrAway(value as "home" | "away")}
+              value={homeOrAway}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select side" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="home">Home</SelectItem>
+                <SelectItem value="away">Away</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Date and Time</p>
+            <Input onChange={(event) => setDate(event.target.value)} type="datetime-local" value={date} />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Location</p>
+            <Input onChange={(event) => setLocation(event.target.value)} placeholder="Field / stadium" value={location} />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <p className="text-sm font-medium">Tournament (optional)</p>
+            <Select onValueChange={setTournamentId} value={tournamentId}>
+              <SelectTrigger>
+                <SelectValue placeholder="No tournament" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No tournament</SelectItem>
+                {data.tournaments.map((tournament) => (
+                  <SelectItem key={tournament.id} value={tournament.id}>
+                    {tournament.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="md:col-span-2">
+            <Button
+              disabled={!opponentTeamId || !date}
+              onClick={() => {
+                const result = addCoachGame(coach.id, {
+                  opponentTeamId,
+                  date,
+                  location,
+                  homeOrAway,
+                  tournamentId: tournamentId === "none" ? undefined : tournamentId
+                });
+
+                setGameMessage(result.success ? "Game added to schedule." : result.error ?? "Unable to add game.");
+                if (result.success) {
+                  setDate("");
+                  setLocation("");
+                  setTournamentId("none");
+                }
+              }}
+            >
+              Add Game
+            </Button>
+            {gameMessage ? <p className="mt-2 text-sm text-muted-foreground">{gameMessage}</p> : null}
+          </div>
+        </CardContent>
+      </Card>
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Games</h2>

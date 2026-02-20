@@ -17,8 +17,8 @@ import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
 
 const roleDescriptions: Record<UserRole, string> = {
-  player: "Manage your profile, clips, and privacy settings.",
-  parent: "Support one or more athletes and upload clips on their behalf.",
+  player: "Manage your profile, clips, and schedule.",
+  parent: "Support linked athletes, upload clips, and control profile privacy.",
   coach: "Review roster players, clips, and match schedule for your team.",
   recruiter: "Evaluate tournaments, games, and discover public player profiles."
 };

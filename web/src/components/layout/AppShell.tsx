@@ -12,8 +12,7 @@ const navByRole: Record<UserRole, { label: string; path: string }[]> = {
     { label: "Overview", path: "/player" },
     { label: "Profile", path: "/player/profile" },
     { label: "Clips", path: "/player/clips" },
-    { label: "Schedule", path: "/player/schedule" },
-    { label: "Privacy", path: "/player/settings/privacy" }
+    { label: "Schedule", path: "/player/schedule" }
   ],
   parent: [
     { label: "Overview", path: "/parent" },
