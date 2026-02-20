@@ -102,6 +102,7 @@ export interface Game {
   location: string;
   homeTeamId: string;
   awayTeamId: string;
+  createdByCoachId?: string;
 }
 
 export interface Clip {
@@ -125,6 +126,21 @@ export interface SampleVideoOption {
   posterUrl: string;
 }
 
+export type TeamInviteStatus = "pending" | "accepted" | "declined";
+
+export type TeamInviteResponderRole = "player" | "parent";
+
+export interface TeamInvite {
+  id: string;
+  teamId: string;
+  playerId: string;
+  invitedByCoachId: string;
+  status: TeamInviteStatus;
+  createdAt: string;
+  respondedAt?: string;
+  respondedByRole?: TeamInviteResponderRole;
+}
+
 export interface AppData {
   users: User[];
   players: Player[];
@@ -136,6 +152,7 @@ export interface AppData {
   tournaments: Tournament[];
   games: Game[];
   clips: Clip[];
+  teamInvites: TeamInvite[];
   sampleVideos: SampleVideoOption[];
 }
 
@@ -155,6 +172,21 @@ export interface ClipUpdateInput {
   clipId: string;
   tags: ClipTag[];
   notes: string;
+}
+
+export interface TeamInviteResponseInput {
+  inviteId: string;
+  responderRole: TeamInviteResponderRole;
+  responderId: string;
+  accept: boolean;
+}
+
+export interface CoachGameInput {
+  opponentTeamId: string;
+  date: string;
+  location: string;
+  homeOrAway: "home" | "away";
+  tournamentId?: string;
 }
 
 export interface RecruiterFilters {

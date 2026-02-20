@@ -4,7 +4,9 @@ import { ClipCard } from "@/components/cards/ClipCard";
 import { UploadClipModal } from "@/components/modals/UploadClipModal";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import { useUIStore } from "@/store/uiStore";
@@ -13,7 +15,7 @@ import { getTeamName } from "@/lib/selectors";
 export function ParentPlayerDetailPage() {
   const { playerId } = useParams<{ playerId: string }>();
   const { selectedUserId } = useAuthStore();
-  const { data, uploadClip } = useDataStore();
+  const { data, setPlayerPrivacy, uploadClip } = useDataStore();
   const { isUploadModalOpen, uploadTargetPlayerId, openUploadModal, closeUploadModal } = useUIStore();
 
   const parent = data.parents.find((entry) => entry.id === selectedUserId);
@@ -27,6 +29,7 @@ export function ParentPlayerDetailPage() {
   }
 
   const clips = data.clips.filter((clip) => clip.playerId === player.id);
+  const isPublic = player.privacy === "public";
 
   return (
     <div>
@@ -40,6 +43,29 @@ export function ParentPlayerDetailPage() {
         <PlayerCard player={player} teamNames={player.teamIds.map((teamId) => getTeamName(data, teamId))} />
 
         <section>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                Player Visibility
+                <Badge>{isPublic ? "Public" : "Private"}</Badge>
+              </CardTitle>
+              <CardDescription>Parents control who can discover this player profile.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Button disabled={isPublic} onClick={() => setPlayerPrivacy(player.id, "public")} size="sm">
+                Set Public
+              </Button>
+              <Button
+                disabled={!isPublic}
+                onClick={() => setPlayerPrivacy(player.id, "private")}
+                size="sm"
+                variant="outline"
+              >
+                Set Private
+              </Button>
+            </CardContent>
+          </Card>
+
           <h2 className="mb-3 text-lg font-semibold">Clips</h2>
           {clips.length ? (
             <div className="grid gap-4 md:grid-cols-2">

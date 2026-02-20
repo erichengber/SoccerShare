@@ -8,6 +8,7 @@ import type {
   SampleVideoOption,
   School,
   Team,
+  TeamInvite,
   Tournament,
   User,
   UserRole,
@@ -666,6 +667,17 @@ const clips: Clip[] = [
   }
 ];
 
+const teamInvites: TeamInvite[] = [
+  {
+    id: "invite-1",
+    teamId: "team-2",
+    playerId: "player-3",
+    invitedByCoachId: "coach-4",
+    status: "pending",
+    createdAt: "2026-02-18T19:00:00Z"
+  }
+];
+
 const users: User[] = [...players, ...parents, ...coaches, ...recruiters];
 
 export const mockData: AppData = {
@@ -679,6 +691,7 @@ export const mockData: AppData = {
   tournaments,
   games,
   clips,
+  teamInvites,
   sampleVideos
 };
 
