@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CLIP_TAGS } from "@/constants/domain";
 import {
   Dialog,
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import type { ClipTag, ClipUploadInput, Game, Player, SampleVideoOption, Tournament } from "@/types/domain";
+import type { ClipTag, ClipUploadInput, Game, Player, Tournament } from "@/types/domain";
 
 interface UploadClipModalProps {
   open: boolean;
@@ -28,8 +28,14 @@ interface UploadClipModalProps {
   player: Player;
   games: Game[];
   tournaments: Tournament[];
-  sampleVideos: SampleVideoOption[];
   onSubmit: (input: ClipUploadInput) => void;
+}
+
+function formatTime(seconds: number) {
+  const safeValue = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(safeValue / 60);
+  const remainingSeconds = safeValue % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
 export function UploadClipModal({
@@ -38,33 +44,85 @@ export function UploadClipModal({
   player,
   games,
   tournaments,
-  sampleVideos,
   onSubmit
 }: UploadClipModalProps) {
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+
   const [title, setTitle] = useState("");
-  const [selectedVideoId, setSelectedVideoId] = useState(sampleVideos[0]?.id ?? "");
-  const [customVideoUrl, setCustomVideoUrl] = useState("");
-  const [posterUrl, setPosterUrl] = useState("");
+  const [fileInputResetKey, setFileInputResetKey] = useState(0);
+  const [localVideoFile, setLocalVideoFile] = useState<File>();
+  const [localVideoObjectUrl, setLocalVideoObjectUrl] = useState<string>();
+  const [posterDataUrl, setPosterDataUrl] = useState<string>();
+  const [posterFrameTime, setPosterFrameTime] = useState(0);
+  const [videoDurationSec, setVideoDurationSec] = useState(0);
   const [durationSec, setDurationSec] = useState(20);
   const [selectedTags, setSelectedTags] = useState<ClipTag[]>([]);
   const [notes, setNotes] = useState("");
   const [gameId, setGameId] = useState<string>();
   const [tournamentId, setTournamentId] = useState<string>();
 
-  const selectedSampleVideo = useMemo(
-    () => sampleVideos.find((entry) => entry.id === selectedVideoId),
-    [sampleVideos, selectedVideoId]
-  );
+  useEffect(() => {
+    return () => {
+      if (localVideoObjectUrl) {
+        URL.revokeObjectURL(localVideoObjectUrl);
+      }
+    };
+  }, [localVideoObjectUrl]);
 
   function toggleTag(tag: ClipTag, checked: boolean) {
     setSelectedTags((prev) => (checked ? [...prev, tag] : prev.filter((entry) => entry !== tag)));
   }
 
+  function handleVideoFileChange(file: File | undefined) {
+    if (localVideoObjectUrl) {
+      URL.revokeObjectURL(localVideoObjectUrl);
+    }
+
+    if (!file) {
+      setLocalVideoFile(undefined);
+      setLocalVideoObjectUrl(undefined);
+      setPosterDataUrl(undefined);
+      setPosterFrameTime(0);
+      setVideoDurationSec(0);
+      return;
+    }
+
+    const nextObjectUrl = URL.createObjectURL(file);
+    setLocalVideoFile(file);
+    setLocalVideoObjectUrl(nextObjectUrl);
+    setPosterDataUrl(undefined);
+    setPosterFrameTime(0);
+    setVideoDurationSec(0);
+  }
+
+  function handleCapturePoster() {
+    const video = previewVideoRef.current;
+    if (!video) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setPosterDataUrl(canvas.toDataURL("image/jpeg", 0.9));
+    setPosterFrameTime(video.currentTime || 0);
+  }
+
   function resetForm() {
+    if (localVideoObjectUrl) {
+      URL.revokeObjectURL(localVideoObjectUrl);
+    }
+
     setTitle("");
-    setSelectedVideoId(sampleVideos[0]?.id ?? "");
-    setCustomVideoUrl("");
-    setPosterUrl("");
+    setLocalVideoFile(undefined);
+    setLocalVideoObjectUrl(undefined);
+    setPosterDataUrl(undefined);
+    setPosterFrameTime(0);
+    setVideoDurationSec(0);
+    setFileInputResetKey((prev) => prev + 1);
     setDurationSec(20);
     setSelectedTags([]);
     setNotes("");
@@ -73,14 +131,13 @@ export function UploadClipModal({
   }
 
   function handleSubmit() {
-    const videoUrl = customVideoUrl.trim() || selectedSampleVideo?.url;
-    if (!videoUrl || !title.trim() || selectedTags.length === 0) return;
+    if (!localVideoObjectUrl || !title.trim() || selectedTags.length === 0) return;
 
     onSubmit({
       playerId: player.id,
       title: title.trim(),
-      videoUrl,
-      posterUrl: posterUrl.trim() || selectedSampleVideo?.posterUrl,
+      videoUrl: localVideoObjectUrl,
+      posterUrl: posterDataUrl,
       durationSec,
       tags: selectedTags,
       notes: notes.trim(),
@@ -91,6 +148,8 @@ export function UploadClipModal({
     resetForm();
     onOpenChange(false);
   }
+
+  const canSave = Boolean(localVideoObjectUrl && title.trim() && selectedTags.length);
 
   return (
     <Dialog
@@ -104,7 +163,8 @@ export function UploadClipModal({
         <DialogHeader>
           <DialogTitle>Upload Clip for {player.firstName}</DialogTitle>
           <DialogDescription>
-            Select a sample video or paste your own URL, then attach tags and optional game/tournament links.
+            Select a video file from your computer, capture a poster frame, then add tags and optional
+            game/tournament links.
           </DialogDescription>
         </DialogHeader>
 
@@ -115,45 +175,61 @@ export function UploadClipModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Sample video</Label>
-            <Select onValueChange={setSelectedVideoId} value={selectedVideoId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select sample video" />
-              </SelectTrigger>
-              <SelectContent>
-                {sampleVideos.map((video) => (
-                  <SelectItem key={video.id} value={video.id}>
-                    {video.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="local-video-file">Video file</Label>
+            <Input
+              accept="video/mp4,video/quicktime,video/webm"
+              id="local-video-file"
+              key={fileInputResetKey}
+              onChange={(event) => handleVideoFileChange(event.target.files?.[0])}
+              type="file"
+            />
+            {localVideoFile ? (
+              <p className="text-xs text-muted-foreground">Selected file: {localVideoFile.name}</p>
+            ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="custom-video-url">Custom video URL (optional)</Label>
-            <Input
-              id="custom-video-url"
-              onChange={(event) => setCustomVideoUrl(event.target.value)}
-              placeholder="https://...mp4"
-              value={customVideoUrl}
-            />
-          </div>
+          {localVideoObjectUrl ? (
+            <div className="space-y-3 rounded-lg border p-3">
+              <div className="space-y-2">
+                <Label>Poster Selector</Label>
+                <video
+                  className="h-56 w-full rounded-md border bg-black object-contain"
+                  controls
+                  onLoadedMetadata={(event) => {
+                    const seconds = Math.max(1, Math.floor(event.currentTarget.duration || 1));
+                    setVideoDurationSec(seconds);
+                    setDurationSec(seconds);
+                  }}
+                  ref={previewVideoRef}
+                  src={localVideoObjectUrl}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Move to your desired frame in the video, then click capture.
+                </p>
+                <Button onClick={handleCapturePoster} size="sm" type="button" variant="outline">
+                  Capture Current Frame
+                </Button>
+              </div>
+
+              {posterDataUrl ? (
+                <div className="space-y-2">
+                  <Label>Selected Poster ({formatTime(posterFrameTime)})</Label>
+                  <img
+                    alt="Selected poster frame"
+                    className="h-40 w-full rounded-md border object-cover"
+                    src={posterDataUrl}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="poster-url">Poster URL (optional)</Label>
-              <Input
-                id="poster-url"
-                onChange={(event) => setPosterUrl(event.target.value)}
-                placeholder="https://...jpg"
-                value={posterUrl}
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="duration">Duration (seconds)</Label>
               <Input
                 id="duration"
+                max={videoDurationSec || undefined}
                 min={1}
                 onChange={(event) => setDurationSec(Math.max(1, Number(event.target.value) || 1))}
                 type="number"
@@ -228,7 +304,9 @@ export function UploadClipModal({
           <Button onClick={() => onOpenChange(false)} variant="outline">
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>Save Clip</Button>
+          <Button disabled={!canSave} onClick={handleSubmit}>
+            Save Clip
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
