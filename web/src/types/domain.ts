@@ -58,7 +58,7 @@ export interface Parent extends UserBase {
 
 export interface Coach extends UserBase {
   role: "coach";
-  teamId: string;
+  teamId?: string;
   schoolId?: string;
 }
 
@@ -187,6 +187,12 @@ export interface CoachGameInput {
   location: string;
   homeOrAway: "home" | "away";
   tournamentId?: string;
+}
+
+export interface CreateCoachTeamInput {
+  name: string;
+  level: TeamLevel;
+  schoolId?: string;
 }
 
 export interface RecruiterFilters {

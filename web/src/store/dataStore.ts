@@ -1,13 +1,17 @@
 import { create } from "zustand";
 import { mockData } from "@/data/mockData";
+import { createCoachTeamInSupabase, fetchCoachTeamFromSupabase } from "@/lib/teamClient";
 import type {
   AppData,
   Clip,
   ClipUploadInput,
   ClipUpdateInput,
+  Coach,
   CoachGameInput,
+  CreateCoachTeamInput,
   Player,
   PlayerPrivacy,
+  Team,
   TeamInvite,
   TeamInviteResponseInput
 } from "@/types/domain";
@@ -17,8 +21,12 @@ interface ActionResult {
   error?: string;
 }
 
+type AsyncActionResult = Promise<ActionResult>;
+
 interface DataState {
   data: AppData;
+  createCoachTeam: (coachId: string, input: CreateCoachTeamInput) => AsyncActionResult;
+  syncCoachTeamFromSupabase: (coachId: string) => AsyncActionResult;
   invitePlayerToTeam: (coachId: string, playerId: string) => ActionResult;
   respondToTeamInvite: (input: TeamInviteResponseInput) => ActionResult;
   addCoachGame: (coachId: string, input: CoachGameInput) => ActionResult;
@@ -32,13 +40,179 @@ function addTeamToPlayer(player: Player, teamId: string): Player {
   return { ...player, teamIds: [...player.teamIds, teamId] };
 }
 
+function upsertTeam(teams: Team[], team: Team): Team[] {
+  const existingTeamIndex = teams.findIndex((entry) => entry.id === team.id);
+  if (existingTeamIndex === -1) {
+    return [team, ...teams];
+  }
+
+  return teams.map((entry) => (entry.id === team.id ? team : entry));
+}
+
+function applyCoachTeamAssignment(
+  data: AppData,
+  coachId: string,
+  nextTeamId: string | undefined,
+  schoolId: string | undefined
+) {
+  const currentCoach = data.coaches.find((coach) => coach.id === coachId);
+  const previousTeamId = currentCoach?.teamId;
+
+  const teams = data.teams.map((team) => {
+    if (previousTeamId && team.id === previousTeamId && previousTeamId !== nextTeamId) {
+      return {
+        ...team,
+        coachIds: team.coachIds.filter((id) => id !== coachId)
+      };
+    }
+
+    if (nextTeamId && team.id === nextTeamId && !team.coachIds.includes(coachId)) {
+      return {
+        ...team,
+        coachIds: [...team.coachIds, coachId]
+      };
+    }
+
+    return team;
+  });
+
+  const coaches = data.coaches.map((coach) =>
+    coach.id === coachId
+      ? {
+          ...coach,
+          teamId: nextTeamId,
+          schoolId
+        }
+      : coach
+  );
+  const users = data.users.map((user) =>
+    user.role === "coach" && user.id === coachId
+      ? {
+          ...user,
+          teamId: nextTeamId,
+          schoolId
+        }
+      : user
+  );
+
+  return {
+    ...data,
+    teams,
+    coaches: coaches as Coach[],
+    users
+  };
+}
+
 export const useDataStore = create<DataState>((set, get) => ({
   data: mockData,
+  createCoachTeam: async (coachId, input) => {
+    const { data } = get();
+    const coach = data.coaches.find((entry) => entry.id === coachId);
+    if (!coach) {
+      return { success: false, error: "Coach not found." };
+    }
+
+    const teamName = input.name.trim();
+    if (!teamName) {
+      return { success: false, error: "Team name is required." };
+    }
+
+    const schoolId = input.schoolId?.trim() || undefined;
+    if (schoolId && !data.schools.some((school) => school.id === schoolId)) {
+      return { success: false, error: "Selected school is invalid." };
+    }
+
+    const createResult = await createCoachTeamInSupabase({
+      coachId,
+      name: teamName,
+      level: input.level,
+      schoolId
+    });
+
+    if (!createResult.data?.team) {
+      return {
+        success: false,
+        error: createResult.error ?? "Unable to create team."
+      };
+    }
+
+    const createdTeam = createResult.data.team;
+
+    set((state) => {
+      const nextDataWithAssignment = applyCoachTeamAssignment(
+        state.data,
+        coachId,
+        createdTeam.id,
+        createdTeam.schoolId
+      );
+
+      return {
+        data: {
+          ...nextDataWithAssignment,
+          teams: upsertTeam(nextDataWithAssignment.teams, {
+            ...createdTeam,
+            coachIds: createdTeam.coachIds.includes(coachId)
+              ? createdTeam.coachIds
+              : [...createdTeam.coachIds, coachId]
+          })
+        }
+      };
+    });
+
+    return { success: true };
+  },
+  syncCoachTeamFromSupabase: async (coachId) => {
+    const { data } = get();
+    if (!data.coaches.some((entry) => entry.id === coachId)) {
+      return { success: false, error: "Coach not found." };
+    }
+
+    const syncResult = await fetchCoachTeamFromSupabase(coachId);
+    if (!syncResult.data) {
+      return {
+        success: false,
+        error: syncResult.error ?? "Unable to sync coach team."
+      };
+    }
+
+    set((state) => {
+      const assignedData = applyCoachTeamAssignment(
+        state.data,
+        coachId,
+        syncResult.data?.teamId,
+        syncResult.data?.schoolId
+      );
+
+      if (!syncResult.data?.team) {
+        return { data: assignedData };
+      }
+
+      return {
+        data: {
+          ...assignedData,
+          teams: upsertTeam(
+            assignedData.teams,
+            syncResult.data.team.coachIds.includes(coachId)
+              ? syncResult.data.team
+              : {
+                  ...syncResult.data.team,
+                  coachIds: [...syncResult.data.team.coachIds, coachId]
+                }
+          )
+        }
+      };
+    });
+
+    return { success: true };
+  },
   invitePlayerToTeam: (coachId, playerId) => {
     const { data } = get();
     const coach = data.coaches.find((entry) => entry.id === coachId);
     if (!coach) {
       return { success: false, error: "Coach not found." };
+    }
+    if (!coach.teamId) {
+      return { success: false, error: "Create a team before inviting players." };
     }
 
     const player = data.players.find((entry) => entry.id === playerId);
@@ -160,6 +334,9 @@ export const useDataStore = create<DataState>((set, get) => ({
     const coach = data.coaches.find((entry) => entry.id === coachId);
     if (!coach) {
       return { success: false, error: "Coach not found." };
+    }
+    if (!coach.teamId) {
+      return { success: false, error: "Create a team before adding games." };
     }
 
     const opponentTeam = data.teams.find((entry) => entry.id === input.opponentTeamId);
