@@ -1,0 +1,117 @@
+Project status Report
+Project Summary
+Report date
+Team Name:
+Prepared for:
+2/20/2026
+SoccerShare
+Week 6
+
+Status Summary/Completed Activities
+Completed Sprint 2
+Developed CI/CD pipeline to deploy project to web
+Changed upload clip flow to upload file directly from computer and select a thumbnail from it
+Moved privacy settings
+Added team management for coaches
+Developed database schema in Supabase
+Presented progress to advisor
+Task
+% Done
+Due date
+Person Responsible
+Notes
+Finished Sprint 2
+100%
+2/20/26
+All
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Activities Planned for Next Week 
+Task
+Person Responsible
+
+
+
+
+Notes
+Start Sprint 3
+All
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Risk and issue history
+Issue
+Mitigation Plan
+
+
+N/A
+N/A
+
+
+
+Did your team meet with your faculty advisor this week? Yes/No. 
+NExt Scheduled Meeting with your advisor_3/13__
+*At the end of each week email form to advisor and turn in on Canvas.
+
+
+
+
+
+
+
+Github Insights
+
+
+
+
+
+
+
+
+AI Prompts
+None this week

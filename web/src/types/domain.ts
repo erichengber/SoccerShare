@@ -93,6 +93,7 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   gameIds: string[];
+  createdByCoachId?: string;
 }
 
 export interface Game {
@@ -187,6 +188,13 @@ export interface CoachGameInput {
   location: string;
   homeOrAway: "home" | "away";
   tournamentId?: string;
+}
+
+export interface CoachTournamentInput {
+  name: string;
+  location: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface RecruiterFilters {
