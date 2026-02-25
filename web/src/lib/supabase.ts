@@ -1,26 +1,29 @@
-import { createClient } from '@supabase/supabase-js';
-import type { AppData } from '../types/domain';
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
-export const supabase = createClient<AppData>(supabaseUrl, supabaseAnonKey);
+function requireSupabaseClient() {
+  if (!supabase) {
+    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+  }
+  return supabase;
+}
 
 // Helper functions for common operations
 export const supabaseAuth = {
   signUp: (email: string, password: string) =>
-    supabase.auth.signUp({ email, password }),
-  
+    requireSupabaseClient().auth.signUp({ email, password }),
+
   signIn: (email: string, password: string) =>
-    supabase.auth.signInWithPassword({ email, password }),
-  
-  signOut: () => supabase.auth.signOut(),
-  
-  getCurrentUser: () => supabase.auth.getUser(),
-  
-  getSession: () => supabase.auth.getSession(),
+    requireSupabaseClient().auth.signInWithPassword({ email, password }),
+
+  signOut: () => requireSupabaseClient().auth.signOut(),
+
+  getCurrentUser: () => requireSupabaseClient().auth.getUser(),
+
+  getSession: () => requireSupabaseClient().auth.getSession()
 };

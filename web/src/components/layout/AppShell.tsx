@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,12 @@ const navByRole: Record<UserRole, { label: string; path: string }[]> = {
 
 export function AppShell() {
   const { selectedRole, selectedUserId, clearSession } = useAuthStore();
-  const { data } = useDataStore();
+  const { data, syncCoachTeamFromSupabase } = useDataStore();
+
+  useEffect(() => {
+    if (!selectedUserId || selectedRole !== "coach") return;
+    void syncCoachTeamFromSupabase(selectedUserId);
+  }, [selectedRole, selectedUserId, syncCoachTeamFromSupabase]);
 
   if (!selectedRole || !selectedUserId) return null;
 
@@ -81,7 +87,7 @@ export function AppShell() {
           </nav>
           <Separator className="my-3" />
           <p className="px-3 text-xs text-muted-foreground">
-            MVP mode with mock data only. Supabase integration points are pre-marked in stores.
+            MVP mode with mock data plus coach team creation synced to Supabase.
           </p>
         </aside>
 

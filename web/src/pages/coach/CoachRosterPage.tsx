@@ -26,14 +26,23 @@ export function CoachRosterPage() {
   if (!coach) {
     return <EmptyState description="Select a valid coach demo user." title="Coach not found" />;
   }
+  if (!coach.teamId) {
+    return (
+      <EmptyState
+        description="Create a team from Coach Overview before inviting players or managing roster."
+        title="No team linked"
+      />
+    );
+  }
+  const coachTeamId = coach.teamId;
 
-  const roster = data.players.filter((player) => player.teamIds.includes(coach.teamId));
+  const roster = data.players.filter((player) => player.teamIds.includes(coachTeamId));
   const pendingInvites = data.teamInvites.filter(
-    (invite) => invite.teamId === coach.teamId && invite.status === "pending"
+    (invite) => invite.teamId === coachTeamId && invite.status === "pending"
   );
   const inviteCandidates = data.players.filter(
     (player) =>
-      !player.teamIds.includes(coach.teamId) &&
+      !player.teamIds.includes(coachTeamId) &&
       !pendingInvites.some((invite) => invite.playerId === player.id)
   );
 

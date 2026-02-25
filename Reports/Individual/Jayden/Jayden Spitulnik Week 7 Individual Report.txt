@@ -1,0 +1,11 @@
+Time Dedicated to the Project
+- This week I committed 4 hours to the project. I focused on implementing full coach team creation so a coach can create a brand new team dynamically instead of relying on hardcoded data.
+
+Contribution to the Project Development Process
+- I contributed by building and connecting a complete coach team-creation workflow to Supabase, including creating teams, linking the created team to the coach account, syncing coach-team assignments on login/session load, and updating coach pages to handle both linked-team and no-team states.
+
+Demonstration of Applied Knowledge
+- I demonstrated my knowledge by extending our TypeScript domain models and Zustand store with async data actions for team creation and team sync, adding a dedicated Supabase team client, and updating role-based UI logic across coach overview, roster, schedule, and player detail pages. I also validated state consistency so team ownership updates propagate correctly throughout the app.
+
+Reflection and Lessons Learned
+- This week reinforced that backend integration is not just API calls; it requires consistent domain modeling, state synchronization, and guardrails in the UI. I learned the importance of designing for transitional states (for example, coach accounts with no team yet) so workflows remain robust as we migrate from mock data to a real database.

@@ -36,6 +36,14 @@ export function CoachSchedulePage() {
   if (!coach) {
     return <EmptyState description="Select a valid coach demo user." title="Coach not found" />;
   }
+  if (!coach.teamId) {
+    return (
+      <EmptyState
+        description="Create a team from Coach Overview before creating games or viewing team schedule."
+        title="No team linked"
+      />
+    );
+  }
 
   const opponentTeams = data.teams.filter((team) => team.id !== coach.teamId);
 
