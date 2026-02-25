@@ -19,13 +19,18 @@ import { getTeamName } from "@/lib/selectors";
 
 export function CoachSchedulePage() {
   const { selectedUserId } = useAuthStore();
-  const { data, addCoachGame } = useDataStore();
+  const { data, addCoachGame, addCoachTournament } = useDataStore();
   const [opponentTeamId, setOpponentTeamId] = useState("");
   const [date, setDate] = useState("");
   const [location, setLocation] = useState("");
   const [homeOrAway, setHomeOrAway] = useState<"home" | "away">("home");
   const [tournamentId, setTournamentId] = useState<string>("none");
   const [gameMessage, setGameMessage] = useState<string>();
+  const [tournamentName, setTournamentName] = useState("");
+  const [tournamentLocation, setTournamentLocation] = useState("");
+  const [tournamentStartDate, setTournamentStartDate] = useState("");
+  const [tournamentEndDate, setTournamentEndDate] = useState("");
+  const [tournamentMessage, setTournamentMessage] = useState<string>();
 
   const coach = data.coaches.find((entry) => entry.id === selectedUserId);
   if (!coach) {
@@ -50,6 +55,7 @@ export function CoachSchedulePage() {
   );
 
   const tournaments = data.tournaments.filter((tournament) =>
+    tournament.createdByCoachId === coach.id ||
     tournament.gameIds.some((gameId) => games.some((game) => game.id === gameId))
   );
 
@@ -145,6 +151,83 @@ export function CoachSchedulePage() {
               Add Game
             </Button>
             {gameMessage ? <p className="mt-2 text-sm text-muted-foreground">{gameMessage}</p> : null}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Create Tournament</CardTitle>
+          <CardDescription>Create a tournament that your team can attach games to.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Tournament Name</p>
+            <Input
+              onChange={(event) => setTournamentName(event.target.value)}
+              placeholder="Spring Showcase Cup"
+              value={tournamentName}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Location</p>
+            <Input
+              onChange={(event) => setTournamentLocation(event.target.value)}
+              placeholder="City, State"
+              value={tournamentLocation}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Start Date</p>
+            <Input
+              onChange={(event) => setTournamentStartDate(event.target.value)}
+              type="date"
+              value={tournamentStartDate}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">End Date</p>
+            <Input
+              onChange={(event) => setTournamentEndDate(event.target.value)}
+              type="date"
+              value={tournamentEndDate}
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <Button
+              disabled={
+                !tournamentName || !tournamentLocation || !tournamentStartDate || !tournamentEndDate
+              }
+              onClick={() => {
+                const result = addCoachTournament(coach.id, {
+                  name: tournamentName,
+                  location: tournamentLocation,
+                  startDate: tournamentStartDate,
+                  endDate: tournamentEndDate
+                });
+
+                setTournamentMessage(
+                  result.success
+                    ? "Tournament created. You can now attach games to it."
+                    : result.error ?? "Unable to create tournament."
+                );
+                if (result.success) {
+                  setTournamentName("");
+                  setTournamentLocation("");
+                  setTournamentStartDate("");
+                  setTournamentEndDate("");
+                }
+              }}
+            >
+              Create Tournament
+            </Button>
+            {tournamentMessage ? (
+              <p className="mt-2 text-sm text-muted-foreground">{tournamentMessage}</p>
+            ) : null}
           </div>
         </CardContent>
       </Card>

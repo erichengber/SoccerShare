@@ -6,6 +6,7 @@ import type {
   ClipUploadInput,
   ClipUpdateInput,
   CoachGameInput,
+  CoachTournamentInput,
   Player,
   PlayerPrivacy,
   TeamInvite,
@@ -22,6 +23,7 @@ interface DataState {
   invitePlayerToTeam: (coachId: string, playerId: string) => ActionResult;
   respondToTeamInvite: (input: TeamInviteResponseInput) => ActionResult;
   addCoachGame: (coachId: string, input: CoachGameInput) => ActionResult;
+  addCoachTournament: (coachId: string, input: CoachTournamentInput) => ActionResult;
   uploadClip: (input: ClipUploadInput) => void;
   updateClip: (input: ClipUpdateInput) => void;
   setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => void;
@@ -205,6 +207,57 @@ export const useDataStore = create<DataState>((set, get) => ({
                 : tournament
             )
           : state.data.tournaments
+      }
+    }));
+
+    return { success: true };
+  },
+  addCoachTournament: (coachId, input) => {
+    const { data } = get();
+    const coach = data.coaches.find((entry) => entry.id === coachId);
+    if (!coach) {
+      return { success: false, error: "Coach not found." };
+    }
+
+    const name = input.name.trim();
+    if (!name) {
+      return { success: false, error: "Tournament name is required." };
+    }
+
+    const location = input.location.trim();
+    if (!location) {
+      return { success: false, error: "Tournament location is required." };
+    }
+
+    const startDate = new Date(input.startDate);
+    if (Number.isNaN(startDate.getTime())) {
+      return { success: false, error: "Please enter a valid tournament start date." };
+    }
+
+    const endDate = new Date(input.endDate);
+    if (Number.isNaN(endDate.getTime())) {
+      return { success: false, error: "Please enter a valid tournament end date." };
+    }
+
+    if (endDate < startDate) {
+      return { success: false, error: "Tournament end date must be on or after the start date." };
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        tournaments: [
+          {
+            id: `tournament-${Date.now()}`,
+            name,
+            location,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            gameIds: [],
+            createdByCoachId: coachId
+          },
+          ...state.data.tournaments
+        ]
       }
     }));
 

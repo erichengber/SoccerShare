@@ -1,0 +1,21 @@
+SoccerShare
+Eric Hengber
+Week 7 Individual Report
+
+Time Dedicated to the Project:
+The total hours or days you allocated for different phases (planning, research, implementation, testing)
+3 hours dedicated this week for planning
+How you managed your schedule to ensure progress
+Stayed organized and prioritized work to ensure everything got done
+The consistency and commitment shown in working on the project
+Provided updates in our group chat on completed work and what else needed to be done
+Made sure all tasks were completed by due date including reports and project proposal
+
+Contribution to the Project Development Process:
+Added tournament creation functionality on Coaches view so that Coaches can manage tournament clips for their players
+
+Demonstration of Applied Knowledge:
+I focused on creating a clean and usable experience, making sure required information is collected and that users get clear feedback when actions succeed or fail. I tested the feature by walking through normal use and edge cases to make sure the functionality behaves as expected
+
+Reflection and Lessons Learned:
+This week reinforced how important it is to think through both user experience and data flow when adding a new feature. I learned more about creating complete feature paths from planning to implementation to validation. I also learned that small workflow improvements can have a large impact on usability, especially for role-specific views like the coach dashboard
