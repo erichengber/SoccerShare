@@ -25,6 +25,7 @@ export function RegisterPage() {
   const [role, setRole] = useState<UserRole>("player");
   const [linkedUserId, setLinkedUserId] = useState<string>(data.players[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const usersByRole = useMemo(
     () => ({
@@ -42,35 +43,47 @@ export function RegisterPage() {
     setLinkedUserId(nextUsers[0]?.id ?? "");
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setIsSubmitting(true);
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (normalizedEmail.endsWith("@example.com")) {
+        setError("Please use a real email domain. Addresses at example.com are rejected by Supabase.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+
+      if (!linkedUserId) {
+        setError("Please select a linked demo profile.");
+        return;
+      }
+
+      const result = await register({
+        firstName,
+        lastName,
+        email: normalizedEmail,
+        password,
+        role,
+        userId: linkedUserId
+      });
+
+      if (!result.success) {
+        setError(result.error ?? "Unable to register account.");
+        return;
+      }
+
+      navigate("/login");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (!linkedUserId) {
-      setError("Please select a linked demo profile.");
-      return;
-    }
-
-    const result = register({
-      firstName,
-      lastName,
-      email,
-      password,
-      role,
-      userId: linkedUserId
-    });
-
-    if (!result.success) {
-      setError(result.error ?? "Unable to register account.");
-      return;
-    }
-
-    navigate("/login");
   }
 
   return (
@@ -90,6 +103,7 @@ export function RegisterPage() {
                   <Label htmlFor="first-name">First name</Label>
                   <Input
                     id="first-name"
+                    disabled={isSubmitting}
                     onChange={(event) => setFirstName(event.target.value)}
                     required
                     value={firstName}
@@ -99,6 +113,7 @@ export function RegisterPage() {
                   <Label htmlFor="last-name">Last name</Label>
                   <Input
                     id="last-name"
+                    disabled={isSubmitting}
                     onChange={(event) => setLastName(event.target.value)}
                     required
                     value={lastName}
@@ -110,6 +125,7 @@ export function RegisterPage() {
                 <Label htmlFor="register-email">Email</Label>
                 <Input
                   autoComplete="email"
+                  disabled={isSubmitting}
                   id="register-email"
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="you@school.org"
@@ -124,6 +140,7 @@ export function RegisterPage() {
                   <Label htmlFor="register-password">Password</Label>
                   <Input
                     autoComplete="new-password"
+                    disabled={isSubmitting}
                     id="register-password"
                     minLength={8}
                     onChange={(event) => setPassword(event.target.value)}
@@ -136,6 +153,7 @@ export function RegisterPage() {
                   <Label htmlFor="confirm-password">Confirm password</Label>
                   <Input
                     autoComplete="new-password"
+                    disabled={isSubmitting}
                     id="confirm-password"
                     minLength={8}
                     onChange={(event) => setConfirmPassword(event.target.value)}
@@ -149,7 +167,11 @@ export function RegisterPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="register-role">Role</Label>
-                  <Select onValueChange={(value) => handleRoleChange(value as UserRole)} value={role}>
+                  <Select
+                    disabled={isSubmitting}
+                    onValueChange={(value) => handleRoleChange(value as UserRole)}
+                    value={role}
+                  >
                     <SelectTrigger id="register-role">
                       <SelectValue />
                     </SelectTrigger>
@@ -165,7 +187,7 @@ export function RegisterPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="linked-profile">Linked demo profile</Label>
-                  <Select onValueChange={setLinkedUserId} value={linkedUserId}>
+                  <Select disabled={isSubmitting} onValueChange={setLinkedUserId} value={linkedUserId}>
                     <SelectTrigger id="linked-profile">
                       <SelectValue placeholder="Select profile" />
                     </SelectTrigger>
@@ -182,7 +204,7 @@ export function RegisterPage() {
 
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-              <Button className="w-full" type="submit">
+              <Button className="w-full" disabled={isSubmitting} type="submit">
                 Create Account
               </Button>
             </form>
