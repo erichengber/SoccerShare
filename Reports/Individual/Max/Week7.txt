@@ -1,0 +1,9 @@
+Time Dedicated to the Project
+- This week I spent around 3 hours ensuring Supabase authentication worked, and I tested by ensuring a proper user can be added
+Contribution to the Project Development Process
+- This week I helped create the Supabase authentication making sure an user could be added
+Demonstration of Applied Knowledge
+- I demonstrated applied knowledge by using the Supabase and learning how to read Supabase documentation, to create the process to configure the authentication process
+Reflection and Lessons Learned
+- After setting up the Supabase authentication, I learned the importance of testing to ensure that the user authentication was set up correctly.
+
