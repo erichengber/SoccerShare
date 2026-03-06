@@ -80,6 +80,7 @@ interface AuthActionResult {
   success: boolean;
   error?: string;
   role?: UserRole;
+  onboardingRequired?: boolean;
 }
 
 interface AuthState {
@@ -90,6 +91,13 @@ interface AuthState {
   mode?: "demo" | "mock" | "supabase";
   supabaseUserId?: string;
   accounts: Record<string, AuthAccount>;
+  onboardingCompleteByUserId: Record<string, boolean>;
+  selectRole: (role: UserRole, userId: string) => void;
+  clearSession: () => void;
+  login: (email: string, password: string) => AuthActionResult;
+  register: (input: RegisterAccountInput) => AuthActionResult;
+  markOnboardingComplete: (userId: string) => void;
+  isOnboardingComplete: (userId: string) => boolean;
   initialize: () => Promise<void>;
   selectRole: (role: UserRole, userId: string) => void;
   clearSession: () => Promise<void>;
@@ -98,6 +106,17 @@ interface AuthState {
 }
 
 const defaultAccounts = buildDefaultAccounts();
+// Supabase handoff note:
+// - `onboardingCompleteByUserId` is local-only session state for MVP.
+// - Replace with a DB-backed onboarding flag/derived check from the profile row.
+// - On login, fetch profile completion from Supabase and drive `onboardingRequired` from that source.
+const defaultOnboardingCompletionByUserId = Object.values(defaultAccounts).reduce<Record<string, boolean>>(
+  (acc, account) => {
+    acc[account.userId] = true;
+    return acc;
+  },
+  {}
+);
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -109,6 +128,9 @@ export const useAuthStore = create<AuthState>()(
       mode: undefined,
       supabaseUserId: undefined,
       accounts: defaultAccounts,
+      onboardingCompleteByUserId: defaultOnboardingCompletionByUserId,
+      selectRole: (role, userId) => set({ selectedRole: role, selectedUserId: userId }),
+      clearSession: () =>
       initialize: async () => {
         if (!isSupabaseConfigured) {
           set({ isInitialized: true });
@@ -243,9 +265,13 @@ export const useAuthStore = create<AuthState>()(
           authEmail: result.account.email
         });
 
+        const onboardingComplete =
+          get().onboardingCompleteByUserId[result.account.userId] ?? result.account.role !== "player";
+
         return {
           success: true,
-          role: result.account.role
+          role: result.account.role,
+          onboardingRequired: result.account.role === "player" && !onboardingComplete
         };
       },
       register: async (input) => {
@@ -300,21 +326,44 @@ export const useAuthStore = create<AuthState>()(
         const account = result.account;
 
         set((state) => ({
+          selectedRole: account.role,
+          selectedUserId: account.userId,
+          authEmail: account.email,
           mode: "mock",
           accounts: {
             ...state.accounts,
             [account.email]: account
+          },
+          onboardingCompleteByUserId: {
+            ...state.onboardingCompleteByUserId,
+            [account.userId]: account.role !== "player"
           }
         }));
 
         return {
           success: true,
-          role: account.role
+          role: account.role,
+          onboardingRequired: account.role === "player"
         };
-      }
+      },
+      markOnboardingComplete: (userId) =>
+        set((state) => ({
+          onboardingCompleteByUserId: {
+            ...state.onboardingCompleteByUserId,
+            [userId]: true
+          }
+        })),
+      isOnboardingComplete: (userId) => get().onboardingCompleteByUserId[userId] ?? false
     }),
     {
-      name: "soccershare-auth"
+      name: "soccershare-auth",
+      partialize: (state) => ({
+        selectedRole: state.selectedRole,
+        selectedUserId: state.selectedUserId,
+        authEmail: state.authEmail,
+        accounts: state.accounts,
+        onboardingCompleteByUserId: state.onboardingCompleteByUserId
+      })
     }
   )
 );

@@ -29,7 +29,12 @@ export function LoginPage() {
         return;
       }
 
-      navigate(getHomePathForRole(result.role));
+    if (result.onboardingRequired) {
+      navigate("/onboarding/player");
+      return;
+    }
+
+    navigate(getHomePathForRole(result.role));
     } finally {
       setIsSubmitting(false);
     }

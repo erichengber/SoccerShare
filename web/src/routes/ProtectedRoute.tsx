@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { getHomePathForRole } from "@/lib/roleRouting";
 import type { UserRole } from "@/types/domain";
@@ -8,6 +8,8 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allow }: ProtectedRouteProps) {
+  const { selectedRole, selectedUserId, isOnboardingComplete } = useAuthStore();
+  const location = useLocation();
   const { isInitialized, selectedRole, selectedUserId } = useAuthStore();
 
   if (!isInitialized) {
@@ -20,6 +22,19 @@ export function ProtectedRoute({ allow }: ProtectedRouteProps) {
 
   if (!allow.includes(selectedRole)) {
     return <Navigate replace to={getHomePathForRole(selectedRole)} />;
+  }
+
+  if (selectedRole === "player") {
+    const onboardingPath = "/onboarding/player";
+    const onboardingComplete = isOnboardingComplete(selectedUserId);
+
+    if (!onboardingComplete && location.pathname !== onboardingPath) {
+      return <Navigate replace to={onboardingPath} />;
+    }
+
+    if (onboardingComplete && location.pathname === onboardingPath) {
+      return <Navigate replace to={getHomePathForRole(selectedRole)} />;
+    }
   }
 
   return <Outlet />;
