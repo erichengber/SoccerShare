@@ -8,7 +8,11 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allow }: ProtectedRouteProps) {
-  const { selectedRole, selectedUserId } = useAuthStore();
+  const { user, selectedRole, selectedUserId } = useAuthStore();
+
+  if (!user) {
+    return <Navigate replace to="/" />;
+  }
 
   if (!selectedRole || !selectedUserId) {
     return <Navigate replace to="/select-role" />;

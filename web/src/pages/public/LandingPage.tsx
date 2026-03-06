@@ -1,8 +1,51 @@
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { getHomePathForRole } from "@/lib/roleRouting";
+import { useAuthStore } from "@/store/authStore";
 
 export function LandingPage() {
+  const { user, selectedRole, isLoading, signInWithEmail, signUpWithEmail } = useAuthStore();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [notice, setNotice] = useState<string | undefined>();
+
+  const canSubmit = useMemo(() => email.length > 3 && password.length >= 6 && !isLoading, [email, password, isLoading]);
+
+  if (user && selectedRole) {
+    return <Navigate replace to={getHomePathForRole(selectedRole)} />;
+  }
+
+  if (user && !selectedRole) {
+    return <Navigate replace to="/select-role" />;
+  }
+
+  async function handleSignIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNotice(undefined);
+
+    const maybeError = await signInWithEmail(email.trim(), password);
+    if (maybeError) {
+      setNotice(maybeError);
+    }
+  }
+
+  async function handleSignUp() {
+    setNotice(undefined);
+
+    const maybeError = await signUpWithEmail(email.trim(), password);
+    if (maybeError) {
+      setNotice(maybeError);
+      return;
+    }
+
+    setNotice("Account created. If email confirmation is enabled, verify your inbox and then sign in.");
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-cyan-50 to-emerald-50">
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 md:px-6 lg:grid-cols-[1.2fr_1fr] lg:py-24">
@@ -15,14 +58,56 @@ export function LandingPage() {
             Track development, share clips, and evaluate talent with role-based workflows for players,
             parents, coaches, and recruiters.
           </p>
-          <div className="mt-8 flex gap-3">
-            <Button asChild size="lg">
-              <Link to="/select-role">Launch Demo</Link>
-            </Button>
-          </div>
+          <p className="mt-8 max-w-xl text-sm text-slate-600">
+            Sign in with Supabase to continue. After authentication, choose your role context for this product MVP.
+          </p>
         </section>
 
         <section className="grid gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sign In</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-3" onSubmit={handleSignIn}>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    autoComplete="email"
+                    id="email"
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="you@example.com"
+                    type="email"
+                    value={email}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    autoComplete="current-password"
+                    id="password"
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="At least 6 characters"
+                    type="password"
+                    value={password}
+                  />
+                </div>
+
+                {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button disabled={!canSubmit} size="lg" type="submit">
+                    {isLoading ? "Signing in..." : "Sign In"}
+                  </Button>
+                  <Button disabled={!canSubmit} onClick={handleSignUp} size="lg" type="button" variant="outline">
+                    {isLoading ? "Working..." : "Create Account"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Player & Parent Flow</CardTitle>

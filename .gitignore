@@ -33,6 +33,7 @@ web/.env.*
 
 # TypeScript / tooling caches
 web/.tsbuildinfo
+web/*.tsbuildinfo
 web/.eslintcache
 
 # Test coverage
