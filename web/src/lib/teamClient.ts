@@ -56,7 +56,8 @@ export async function createCoachTeamInSupabase(
 ): Promise<TeamClientResult<{ team: Team }>> {
   if (!supabase) {
     return {
-      error: "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+      error:
+        "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY (or VITE_SUPABASE_ANON_KEY)."
     };
   }
 
@@ -125,7 +126,8 @@ export async function fetchCoachTeamFromSupabase(
 ): Promise<TeamClientResult<CoachTeamSnapshot>> {
   if (!supabase) {
     return {
-      error: "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+      error:
+        "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY (or VITE_SUPABASE_ANON_KEY)."
     };
   }
 

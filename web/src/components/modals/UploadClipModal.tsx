@@ -28,7 +28,7 @@ interface UploadClipModalProps {
   player: Player;
   games: Game[];
   tournaments: Tournament[];
-  onSubmit: (input: ClipUploadInput) => void;
+  onSubmit: (input: ClipUploadInput) => Promise<{ success: boolean; error?: string }>;
 }
 
 function formatTime(seconds: number) {
@@ -52,7 +52,8 @@ export function UploadClipModal({
   const [fileInputResetKey, setFileInputResetKey] = useState(0);
   const [localVideoFile, setLocalVideoFile] = useState<File>();
   const [localVideoObjectUrl, setLocalVideoObjectUrl] = useState<string>();
-  const [posterDataUrl, setPosterDataUrl] = useState<string>();
+  const [posterFile, setPosterFile] = useState<File>();
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string>();
   const [posterFrameTime, setPosterFrameTime] = useState(0);
   const [videoDurationSec, setVideoDurationSec] = useState(0);
   const [durationSec, setDurationSec] = useState(20);
@@ -60,14 +61,19 @@ export function UploadClipModal({
   const [notes, setNotes] = useState("");
   const [gameId, setGameId] = useState<string>();
   const [tournamentId, setTournamentId] = useState<string>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string>();
 
   useEffect(() => {
     return () => {
       if (localVideoObjectUrl) {
         URL.revokeObjectURL(localVideoObjectUrl);
       }
+      if (posterPreviewUrl) {
+        URL.revokeObjectURL(posterPreviewUrl);
+      }
     };
-  }, [localVideoObjectUrl]);
+  }, [localVideoObjectUrl, posterPreviewUrl]);
 
   function toggleTag(tag: ClipTag, checked: boolean) {
     setSelectedTags((prev) => (checked ? [...prev, tag] : prev.filter((entry) => entry !== tag)));
@@ -81,7 +87,11 @@ export function UploadClipModal({
     if (!file) {
       setLocalVideoFile(undefined);
       setLocalVideoObjectUrl(undefined);
-      setPosterDataUrl(undefined);
+      if (posterPreviewUrl) {
+        URL.revokeObjectURL(posterPreviewUrl);
+      }
+      setPosterFile(undefined);
+      setPosterPreviewUrl(undefined);
       setPosterFrameTime(0);
       setVideoDurationSec(0);
       return;
@@ -90,12 +100,17 @@ export function UploadClipModal({
     const nextObjectUrl = URL.createObjectURL(file);
     setLocalVideoFile(file);
     setLocalVideoObjectUrl(nextObjectUrl);
-    setPosterDataUrl(undefined);
+    if (posterPreviewUrl) {
+      URL.revokeObjectURL(posterPreviewUrl);
+    }
+    setPosterFile(undefined);
+    setPosterPreviewUrl(undefined);
     setPosterFrameTime(0);
     setVideoDurationSec(0);
+    setSubmitError(undefined);
   }
 
-  function handleCapturePoster() {
+  async function handleCapturePoster() {
     const video = previewVideoRef.current;
     if (!video) return;
 
@@ -107,7 +122,20 @@ export function UploadClipModal({
     if (!context) return;
 
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    setPosterDataUrl(canvas.toDataURL("image/jpeg", 0.9));
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((value) => resolve(value), "image/jpeg", 0.9);
+    });
+    if (!blob) return;
+
+    if (posterPreviewUrl) {
+      URL.revokeObjectURL(posterPreviewUrl);
+    }
+
+    const nextPosterFile = new File([blob], `${title.trim() || "clip"}-poster.jpg`, {
+      type: "image/jpeg"
+    });
+    setPosterFile(nextPosterFile);
+    setPosterPreviewUrl(URL.createObjectURL(nextPosterFile));
     setPosterFrameTime(video.currentTime || 0);
   }
 
@@ -115,11 +143,15 @@ export function UploadClipModal({
     if (localVideoObjectUrl) {
       URL.revokeObjectURL(localVideoObjectUrl);
     }
+    if (posterPreviewUrl) {
+      URL.revokeObjectURL(posterPreviewUrl);
+    }
 
     setTitle("");
     setLocalVideoFile(undefined);
     setLocalVideoObjectUrl(undefined);
-    setPosterDataUrl(undefined);
+    setPosterFile(undefined);
+    setPosterPreviewUrl(undefined);
     setPosterFrameTime(0);
     setVideoDurationSec(0);
     setFileInputResetKey((prev) => prev + 1);
@@ -128,16 +160,21 @@ export function UploadClipModal({
     setNotes("");
     setGameId(undefined);
     setTournamentId(undefined);
+    setIsSubmitting(false);
+    setSubmitError(undefined);
   }
 
-  function handleSubmit() {
-    if (!localVideoObjectUrl || !title.trim() || selectedTags.length === 0) return;
+  async function handleSubmit() {
+    if (!localVideoFile || !title.trim() || selectedTags.length === 0) return;
 
-    onSubmit({
+    setIsSubmitting(true);
+    setSubmitError(undefined);
+
+    const result = await onSubmit({
       playerId: player.id,
       title: title.trim(),
-      videoUrl: localVideoObjectUrl,
-      posterUrl: posterDataUrl,
+      videoFile: localVideoFile,
+      posterFile,
       durationSec,
       tags: selectedTags,
       notes: notes.trim(),
@@ -145,11 +182,17 @@ export function UploadClipModal({
       tournamentId
     });
 
+    if (!result.success) {
+      setIsSubmitting(false);
+      setSubmitError(result.error ?? "Unable to upload clip.");
+      return;
+    }
+
     resetForm();
     onOpenChange(false);
   }
 
-  const canSave = Boolean(localVideoObjectUrl && title.trim() && selectedTags.length);
+  const canSave = Boolean(localVideoFile && title.trim() && selectedTags.length && !isSubmitting);
 
   return (
     <Dialog
@@ -211,13 +254,13 @@ export function UploadClipModal({
                 </Button>
               </div>
 
-              {posterDataUrl ? (
+              {posterPreviewUrl ? (
                 <div className="space-y-2">
                   <Label>Selected Poster ({formatTime(posterFrameTime)})</Label>
                   <img
                     alt="Selected poster frame"
                     className="h-40 w-full rounded-md border object-cover"
-                    src={posterDataUrl}
+                    src={posterPreviewUrl}
                   />
                 </div>
               ) : null}
@@ -298,14 +341,15 @@ export function UploadClipModal({
             <Label htmlFor="clip-notes">Notes</Label>
             <Textarea id="clip-notes" onChange={(event) => setNotes(event.target.value)} value={notes} />
           </div>
+          {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
         </div>
 
         <DialogFooter>
-          <Button onClick={() => onOpenChange(false)} variant="outline">
+          <Button disabled={isSubmitting} onClick={() => onOpenChange(false)} variant="outline">
             Cancel
           </Button>
-          <Button disabled={!canSave} onClick={handleSubmit}>
-            Save Clip
+          <Button disabled={!canSave} onClick={() => void handleSubmit()}>
+            {isSubmitting ? "Uploading..." : "Save Clip"}
           </Button>
         </DialogFooter>
       </DialogContent>

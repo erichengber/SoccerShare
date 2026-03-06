@@ -160,8 +160,8 @@ export interface AppData {
 export interface ClipUploadInput {
   playerId: string;
   title: string;
-  videoUrl: string;
-  posterUrl?: string;
+  videoFile: File;
+  posterFile?: File;
   durationSec: number;
   tags: ClipTag[];
   notes: string;
@@ -194,6 +194,15 @@ export interface CreateCoachTeamInput {
   name: string;
   level: TeamLevel;
   schoolId?: string;
+}
+
+export interface PlayerOnboardingInput {
+  playerId: string;
+  position: PlayerPosition;
+  jerseyNumber: number;
+  teamId: string;
+  bio: string;
+  avatarUrl: string;
 }
 
 export interface CoachTournamentInput {

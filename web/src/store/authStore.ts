@@ -7,6 +7,7 @@ import {
   type AuthAccount,
   type RegisterAccountInput
 } from "@/lib/authClient";
+import { fetchProfile, isSupabaseConfigured, supabaseAuth } from "@/lib/supabase";
 import type { UserRole } from "@/types/domain";
 
 interface AuthActionResult {
@@ -16,10 +17,12 @@ interface AuthActionResult {
 }
 
 interface AuthState {
+  isInitialized: boolean;
   selectedRole?: UserRole;
   selectedUserId?: string;
   authEmail?: string;
   accounts: Record<string, AuthAccount>;
+  initialize: () => Promise<void>;
   selectRole: (role: UserRole, userId: string) => void;
   clearSession: () => void;
   login: (email: string, password: string) => AuthActionResult;
@@ -31,17 +34,53 @@ const defaultAccounts = buildDefaultAccounts();
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
+      isInitialized: false,
       selectedRole: undefined,
       selectedUserId: undefined,
       authEmail: undefined,
       accounts: defaultAccounts,
+      initialize: async () => {
+        if (!isSupabaseConfigured) {
+          set({ isInitialized: true });
+          return;
+        }
+
+        try {
+          const sessionResult = await supabaseAuth.getSession();
+          const user = sessionResult.data.session?.user;
+          if (!user) {
+            set({
+              isInitialized: true,
+              selectedRole: undefined,
+              selectedUserId: undefined,
+              authEmail: undefined
+            });
+            return;
+          }
+
+          const profile = await fetchProfile(user.id);
+          set({
+            isInitialized: true,
+            selectedRole: profile?.role,
+            selectedUserId: profile?.linked_user_id,
+            authEmail: user.email ?? undefined
+          });
+        } catch {
+          set({ isInitialized: true });
+        }
+      },
       selectRole: (role, userId) => set({ selectedRole: role, selectedUserId: userId }),
-      clearSession: () =>
+      clearSession: () => {
+        if (isSupabaseConfigured) {
+          void supabaseAuth.signOut();
+        }
+
         set({
           selectedRole: undefined,
           selectedUserId: undefined,
           authEmail: undefined
-        }),
+        });
+      },
       login: (email, password) => {
         const result = loginWithPassword(get().accounts, email, password);
 

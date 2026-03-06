@@ -10,7 +10,7 @@ Role-based React + TypeScript frontend MVP inspired by Hudl for middle/high scho
 - shadcn/ui-style component primitives
 - React Router
 - Zustand (with persisted recruiter and auth state)
-- Mock in-memory data only (no backend)
+- Supabase Storage + clips table for media uploads and metadata
 
 ## Run
 
@@ -18,6 +18,21 @@ Role-based React + TypeScript frontend MVP inspired by Hudl for middle/high scho
 npm install
 npm run dev
 ```
+
+## Supabase Setup
+
+1. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` to `web/.env`.
+2. In Supabase SQL Editor, run `web/supabase/setup-storage.sql`.
+3. Upload the existing `web/public` assets into Supabase Storage:
+
+```bash
+npm run supabase:seed:public
+```
+
+Optional:
+- Set `SUPABASE_SERVICE_ROLE_KEY` before running the seed script if you do not want to rely on anon-key write policies.
+- `VITE_SUPABASE_ANON_KEY` is still supported as a fallback.
+- Set `VITE_SUPABASE_MEDIA_BUCKET` if you want a bucket name other than `media`.
 
 ## Routes
 
@@ -37,18 +52,12 @@ npm run dev
 - `src/routes`: Route map + protection
 - `src/lib`: selectors, formatting, role routing
 
-## Supabase Integration Points
+## Supabase Integration
 
-- `src/lib/authClient.ts`
-  - `loginWithPassword`
-  - `registerWithPassword`
-  - Contains handoff notes for replacing mock auth with Supabase Auth + profiles table linkage.
-- `src/store/dataStore.ts`
-  - `uploadClip`
-  - `updateClip`
-  - `setPlayerPrivacy`
-
-These methods are already isolated and commented as handoff points for replacing in-memory mutations with Supabase calls.
+- Existing sample videos/posters resolve to Supabase public URLs after `npm run supabase:seed:public`.
+- New uploads go to Supabase Storage and metadata is upserted into `public.clips`.
+- Clip detail edits also upsert into `public.clips`.
+- If Supabase env vars are missing, the app falls back to in-memory clip behavior for local demo use.
 
 ## Privacy Rules
 
