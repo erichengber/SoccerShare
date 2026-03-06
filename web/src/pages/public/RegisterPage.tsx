@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { USER_ROLES } from "@/constants/domain";
 import { capitalize } from "@/lib/format";
+import { getHomePathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
@@ -67,6 +68,16 @@ export function RegisterPage() {
 
     if (!result.success) {
       setError(result.error ?? "Unable to register account.");
+      return;
+    }
+
+    if (result.onboardingRequired) {
+      navigate("/onboarding/player");
+      return;
+    }
+
+    if (result.role) {
+      navigate(getHomePathForRole(result.role));
       return;
     }
 

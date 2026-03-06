@@ -196,6 +196,15 @@ export interface CreateCoachTeamInput {
   schoolId?: string;
 }
 
+export interface PlayerOnboardingInput {
+  playerId: string;
+  position: PlayerPosition;
+  jerseyNumber: number;
+  teamId: string;
+  bio: string;
+  avatarUrl: string;
+}
+
 export interface CoachTournamentInput {
   name: string;
   location: string;

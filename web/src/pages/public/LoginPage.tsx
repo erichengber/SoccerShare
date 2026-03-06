@@ -26,6 +26,11 @@ export function LoginPage() {
       return;
     }
 
+    if (result.onboardingRequired) {
+      navigate("/onboarding/player");
+      return;
+    }
+
     navigate(getHomePathForRole(result.role));
   }
 

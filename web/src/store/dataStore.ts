@@ -11,6 +11,7 @@ import type {
   CreateCoachTeamInput,
   CoachTournamentInput,
   Player,
+  PlayerOnboardingInput,
   PlayerPrivacy,
   Team,
   TeamInvite,
@@ -35,6 +36,7 @@ interface DataState {
   uploadClip: (input: ClipUploadInput) => void;
   updateClip: (input: ClipUpdateInput) => void;
   setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => void;
+  completePlayerOnboarding: (input: PlayerOnboardingInput) => ActionResult;
 }
 
 function addTeamToPlayer(player: Player, teamId: string): Player {
@@ -490,5 +492,93 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
       };
     });
+  },
+  completePlayerOnboarding: (input) => {
+    // Supabase handoff note:
+    // - Replace this local onboarding write with a DB mutation (profiles/players row update).
+    // - Persist avatar URL from Storage and onboarding fields in one transaction/RPC when possible.
+    // - Keep team membership sync (`team_id` relation or join table) consistent with existing reads.
+    const { data } = get();
+    const player = data.players.find((entry) => entry.id === input.playerId);
+    if (!player) {
+      return { success: false, error: "Player not found." };
+    }
+
+    const team = data.teams.find((entry) => entry.id === input.teamId);
+    if (!team) {
+      return { success: false, error: "Selected team was not found." };
+    }
+
+    if (!Number.isInteger(input.jerseyNumber) || input.jerseyNumber < 0 || input.jerseyNumber > 99) {
+      return { success: false, error: "Jersey number must be between 0 and 99." };
+    }
+
+    const bio = input.bio.trim();
+    if (!bio) {
+      return { success: false, error: "Profile summary is required." };
+    }
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    set((state) => {
+      const nextTeamIds = [input.teamId];
+      const players = state.data.players.map((entry) =>
+        entry.id === input.playerId
+          ? {
+              ...entry,
+              position: input.position,
+              jerseyNumber: input.jerseyNumber,
+              teamIds: nextTeamIds,
+              bio,
+              avatarUrl
+            }
+          : entry
+      );
+      const users = state.data.users.map((entry) =>
+        entry.id === input.playerId && entry.role === "player"
+          ? {
+              ...entry,
+              position: input.position,
+              jerseyNumber: input.jerseyNumber,
+              teamIds: nextTeamIds,
+              bio,
+              avatarUrl
+            }
+          : entry
+      );
+      const teams = state.data.teams.map((entry) => {
+        const shouldContainPlayer = entry.id === input.teamId;
+        const currentlyContainsPlayer = entry.playerIds.includes(input.playerId);
+
+        if (shouldContainPlayer && !currentlyContainsPlayer) {
+          return {
+            ...entry,
+            playerIds: [...entry.playerIds, input.playerId]
+          };
+        }
+
+        if (!shouldContainPlayer && currentlyContainsPlayer) {
+          return {
+            ...entry,
+            playerIds: entry.playerIds.filter((id) => id !== input.playerId)
+          };
+        }
+
+        return entry;
+      });
+
+      return {
+        data: {
+          ...state.data,
+          players,
+          users,
+          teams
+        }
+      };
+    });
+
+    return { success: true };
   }
 }));
