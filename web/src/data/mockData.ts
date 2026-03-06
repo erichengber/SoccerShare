@@ -14,31 +14,32 @@ import type {
   UserRole,
   Game
 } from "@/types/domain";
+import { resolveSeededPublicAssetUrl } from "@/lib/mediaClient";
 
 const sampleVideos: SampleVideoOption[] = [
   {
     id: "vid-1",
     label: "Big Goal Scored!",
-    url: '/6077718-uhd_3840_2160_25fps.mp4',
-    posterUrl: "/messi_thumbnail.jpeg"
+    url: resolveSeededPublicAssetUrl("/6077718-uhd_3840_2160_25fps.mp4"),
+    posterUrl: resolveSeededPublicAssetUrl("/messi_thumbnail.jpeg")
   },
   {
     id: "vid-2",
     label: "Assist in Style",
-    url: "/6078638-uhd_3840_2160_25fps.mp4",
-    posterUrl: "/julie_ertz_thumbnail.jpeg"
+    url: resolveSeededPublicAssetUrl("/6078638-uhd_3840_2160_25fps.mp4"),
+    posterUrl: resolveSeededPublicAssetUrl("/julie_ertz_thumbnail.jpeg")
   },
   {
     id: "vid-3",
     label: "Slide Tackle",
-    url: "/12915089_1920_1080_60fps.mp4",
-    posterUrl: "/neymar_thumbnail.jpeg"
+    url: resolveSeededPublicAssetUrl("/12915089_1920_1080_60fps.mp4"),
+    posterUrl: resolveSeededPublicAssetUrl("/neymar_thumbnail.jpeg")
   },
   {
     id: "vid-4",
     label: "Game Winning PK",
-    url: "/6078638-uhd_3840_2160_25fps.mp4",
-    posterUrl: "/ronaldo_thumbnail.jpeg"
+    url: resolveSeededPublicAssetUrl("/6078638-uhd_3840_2160_25fps.mp4"),
+    posterUrl: resolveSeededPublicAssetUrl("/ronaldo_thumbnail.jpeg")
   }
 ];
 

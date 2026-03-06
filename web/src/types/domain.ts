@@ -160,8 +160,8 @@ export interface AppData {
 export interface ClipUploadInput {
   playerId: string;
   title: string;
-  videoUrl: string;
-  posterUrl?: string;
+  videoFile: File;
+  posterFile?: File;
   durationSec: number;
   tags: ClipTag[];
   notes: string;

@@ -1,0 +1,11 @@
+Time Dedicated to the Project
+- This week I committed 4 hours to the project. I focused on connecting our clip upload and viewing workflow to Supabase storage so videos and thumbnails are no longer limited to local mock assets.
+
+Contribution to the Project Development Process
+- I contributed by implementing Supabase-backed media storage for clips, wiring uploads to persist video files and poster images, adding clip metadata persistence, and creating the SQL/storage setup needed to support those features. I also added a script to seed the existing public media assets into Supabase so our demo content can move over to the real backend.
+
+Demonstration of Applied Knowledge
+- I demonstrated my knowledge by extending our TypeScript models and Zustand data flow to support async clip loading, upload, and update actions. I also built helper clients for Supabase storage and clip records, updated the upload modal to work with real files instead of browser-only object URLs, and documented the environment and migration setup required for the team to deploy these changes.
+
+Reflection and Lessons Learned
+- This week reinforced that moving from a mock frontend to a real backend requires more than just adding a database connection. I learned that storage integration also depends on schema design, migration setup, seed workflows, environment configuration, and preserving fallback behavior so the app still works during development. That made it clear how important it is to think through the full lifecycle of a feature instead of only the UI layer.

@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { mockData } from "@/data/mockData";
+import { fetchClipsFromSupabase, upsertClipInSupabase } from "@/lib/clipClient";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { createCoachTeamInSupabase, fetchCoachTeamFromSupabase } from "@/lib/teamClient";
+import { uploadClipMedia } from "@/lib/mediaClient";
 import type {
   AppData,
   Clip,
@@ -8,8 +11,8 @@ import type {
   ClipUpdateInput,
   Coach,
   CoachGameInput,
-  CreateCoachTeamInput,
   CoachTournamentInput,
+  CreateCoachTeamInput,
   Player,
   PlayerOnboardingInput,
   PlayerPrivacy,
@@ -27,14 +30,18 @@ type AsyncActionResult = Promise<ActionResult>;
 
 interface DataState {
   data: AppData;
+  clipsInitialized: boolean;
+  clipsLoading: boolean;
+  clipsSyncError?: string;
+  loadClips: () => Promise<void>;
   createCoachTeam: (coachId: string, input: CreateCoachTeamInput) => AsyncActionResult;
   syncCoachTeamFromSupabase: (coachId: string) => AsyncActionResult;
   invitePlayerToTeam: (coachId: string, playerId: string) => ActionResult;
   respondToTeamInvite: (input: TeamInviteResponseInput) => ActionResult;
   addCoachGame: (coachId: string, input: CoachGameInput) => ActionResult;
   addCoachTournament: (coachId: string, input: CoachTournamentInput) => ActionResult;
-  uploadClip: (input: ClipUploadInput) => void;
-  updateClip: (input: ClipUpdateInput) => void;
+  uploadClip: (input: ClipUploadInput) => AsyncActionResult;
+  updateClip: (input: ClipUpdateInput) => AsyncActionResult;
   setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => void;
   completePlayerOnboarding: (input: PlayerOnboardingInput) => ActionResult;
 }
@@ -107,8 +114,62 @@ function applyCoachTeamAssignment(
   };
 }
 
+function buildClipId() {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `clip-${Date.now()}`;
+}
+
+function mergeClips(localClips: Clip[], remoteClips: Clip[]) {
+  const clipsById = new Map<string, Clip>();
+
+  localClips.forEach((clip) => {
+    clipsById.set(clip.id, clip);
+  });
+  remoteClips.forEach((clip) => {
+    clipsById.set(clip.id, clip);
+  });
+
+  return Array.from(clipsById.values()).sort(
+    (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt)
+  );
+}
+
 export const useDataStore = create<DataState>((set, get) => ({
   data: mockData,
+  clipsInitialized: false,
+  clipsLoading: false,
+  clipsSyncError: undefined,
+  loadClips: async () => {
+    const { clipsInitialized, clipsLoading } = get();
+    if (clipsInitialized || clipsLoading) {
+      return;
+    }
+
+    set({
+      clipsLoading: true
+    });
+
+    const result = await fetchClipsFromSupabase();
+    if (!result.data) {
+      set({
+        clipsInitialized: true,
+        clipsLoading: false,
+        clipsSyncError: result.error ?? "Unable to sync clips from Supabase."
+      });
+      return;
+    }
+
+    set((state) => ({
+      clipsInitialized: true,
+      clipsLoading: false,
+      clipsSyncError: undefined,
+      data: {
+        ...state.data,
+        clips: mergeClips(state.data.clips, result.data ?? [])
+      }
+    }));
+  },
   createCoachTeam: async (coachId, input) => {
     const { data } = get();
     const coach = data.coaches.find((entry) => entry.id === coachId);
@@ -442,38 +503,107 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     return { success: true };
   },
-  uploadClip: (input) => {
-    set((state) => {
-      const newClip: Clip = {
-        id: `clip-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        ...input
-      };
+  uploadClip: async (input) => {
+    const clipId = buildClipId();
+    const createdAt = new Date().toISOString();
 
-      // Future Supabase integration point:
-      // 1) Upload local file to Supabase Storage and capture the public/signed URL.
-      // 2) Persist clip metadata row instead of in-memory append.
-      return {
-        data: {
-          ...state.data,
-          clips: [newClip, ...state.data.clips]
-        }
+    let nextClip: Clip;
+
+    if (isSupabaseConfigured) {
+      try {
+        const uploadedMedia = await uploadClipMedia({
+          clipId,
+          playerId: input.playerId,
+          videoFile: input.videoFile,
+          posterFile: input.posterFile
+        });
+
+        nextClip = {
+          id: clipId,
+          playerId: input.playerId,
+          title: input.title,
+          videoUrl: uploadedMedia.video.url,
+          posterUrl: uploadedMedia.poster?.url,
+          durationSec: input.durationSec,
+          tags: input.tags,
+          notes: input.notes,
+          gameId: input.gameId,
+          tournamentId: input.tournamentId,
+          createdAt
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unable to upload clip media."
+        };
+      }
+    } else {
+      nextClip = {
+        id: clipId,
+        playerId: input.playerId,
+        title: input.title,
+        videoUrl: URL.createObjectURL(input.videoFile),
+        posterUrl: input.posterFile ? URL.createObjectURL(input.posterFile) : undefined,
+        durationSec: input.durationSec,
+        tags: input.tags,
+        notes: input.notes,
+        gameId: input.gameId,
+        tournamentId: input.tournamentId,
+        createdAt
       };
-    });
+    }
+
+    const saveResult = await upsertClipInSupabase(nextClip);
+    if (!saveResult.data) {
+      return {
+        success: false,
+        error: saveResult.error ?? "Unable to save clip metadata."
+      };
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        clips: mergeClips(state.data.clips, [saveResult.data as Clip])
+      }
+    }));
+
+    return { success: true };
   },
-  updateClip: (input) => {
-    set((state) => {
-      // Future Supabase integration point: replace map update with optimistic update + persisted mutation.
-      const clips = state.data.clips.map((clip) =>
-        clip.id === input.clipId ? { ...clip, tags: input.tags, notes: input.notes } : clip
-      );
+  updateClip: async (input) => {
+    const existingClip = get().data.clips.find((clip) => clip.id === input.clipId);
+    if (!existingClip) {
       return {
-        data: {
-          ...state.data,
-          clips
-        }
+        success: false,
+        error: "Clip not found."
       };
-    });
+    }
+
+    const updatedClip: Clip = {
+      ...existingClip,
+      tags: input.tags,
+      notes: input.notes
+    };
+
+    const saveResult = await upsertClipInSupabase(updatedClip);
+    if (!saveResult.data) {
+      return {
+        success: false,
+        error: saveResult.error ?? "Unable to update clip."
+      };
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        clips: mergeClips(
+          state.data.clips.filter((clip) => clip.id !== input.clipId),
+          [saveResult.data as Clip]
+        )
+      }
+    }));
+
+    return { success: true };
   },
   setPlayerPrivacy: (playerId, privacy) => {
     set((state) => {
@@ -517,6 +647,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (!bio) {
       return { success: false, error: "Profile summary is required." };
     }
+
     const avatarUrl = input.avatarUrl.trim();
     if (!avatarUrl) {
       return { success: false, error: "Profile picture is required." };

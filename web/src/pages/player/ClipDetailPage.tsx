@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
@@ -27,6 +27,14 @@ export function ClipDetailPage() {
 
   const [selectedTags, setSelectedTags] = useState<ClipTag[]>(clip?.tags ?? []);
   const [notes, setNotes] = useState(clip?.notes ?? "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
+
+  useEffect(() => {
+    setSelectedTags(clip?.tags ?? []);
+    setNotes(clip?.notes ?? "");
+    setSaveError(undefined);
+  }, [clip]);
 
   const canSave = useMemo(() => {
     if (!clip) return false;
@@ -100,13 +108,20 @@ export function ClipDetailPage() {
                 ))}
               </div>
               <Textarea onChange={(event) => setNotes(event.target.value)} value={notes} />
+              {saveError ? <p className="text-sm text-destructive">{saveError}</p> : null}
               <Button
-                disabled={!canSave}
-                onClick={() => {
-                  updateClip({ clipId: clip.id, tags: selectedTags, notes });
+                disabled={!canSave || isSaving}
+                onClick={async () => {
+                  setIsSaving(true);
+                  setSaveError(undefined);
+                  const result = await updateClip({ clipId: clip.id, tags: selectedTags, notes });
+                  if (!result.success) {
+                    setSaveError(result.error ?? "Unable to save clip changes.");
+                  }
+                  setIsSaving(false);
                 }}
               >
-                Save Changes
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </CardContent>
           </Card>
