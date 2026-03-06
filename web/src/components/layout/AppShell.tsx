@@ -59,7 +59,7 @@ export function AppShell() {
               </p>
               <p className="text-muted-foreground capitalize">{selectedRole}</p>
             </div>
-            <Button onClick={clearSession} size="sm" variant="outline">
+            <Button onClick={() => void clearSession()} size="sm" variant="outline">
               <LogOut className="h-4 w-4" />
               Log Out
             </Button>
