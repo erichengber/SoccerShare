@@ -5,6 +5,7 @@ import { LandingPage } from "@/pages/public/LandingPage";
 import { LoginPage } from "@/pages/public/LoginPage";
 import { RegisterPage } from "@/pages/public/RegisterPage";
 import { SelectRolePage } from "@/pages/public/SelectRolePage";
+import { PlayerOnboardingPage } from "@/pages/public/PlayerOnboardingPage";
 import { PlayerOverviewPage } from "@/pages/player/PlayerOverviewPage";
 import { PlayerProfilePage } from "@/pages/player/PlayerProfilePage";
 import { PlayerClipsPage } from "@/pages/player/PlayerClipsPage";
@@ -34,41 +35,45 @@ export function AppRoutes() {
       <Route element={<SelectRolePage />} path="/select-role" />
 
       <Route element={<ProtectedRoute allow={["player"]} />}>
+        <Route element={<PlayerOnboardingPage />} path="onboarding/player" />
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["player"]} />}>
         <Route element={<AppShell />}>
-          <Route element={<PlayerOverviewPage />} path="/player" />
-          <Route element={<PlayerProfilePage />} path="/player/profile" />
-          <Route element={<PlayerClipsPage />} path="/player/clips" />
-          <Route element={<ClipDetailPage />} path="/player/clips/:clipId" />
-          <Route element={<PlayerSchedulePage />} path="/player/schedule" />
-          <Route element={<PrivacySettingsPage />} path="/player/settings/privacy" />
+          <Route element={<PlayerOverviewPage />} path="player" />
+          <Route element={<PlayerProfilePage />} path="player/profile" />
+          <Route element={<PlayerClipsPage />} path="player/clips" />
+          <Route element={<ClipDetailPage />} path="player/clips/:clipId" />
+          <Route element={<PlayerSchedulePage />} path="player/schedule" />
+          <Route element={<PrivacySettingsPage />} path="player/settings/privacy" />
         </Route>
       </Route>
 
       <Route element={<ProtectedRoute allow={["parent"]} />}>
         <Route element={<AppShell />}>
-          <Route element={<ParentOverviewPage />} path="/parent" />
-          <Route element={<ParentPlayersPage />} path="/parent/players" />
-          <Route element={<ParentPlayerDetailPage />} path="/parent/players/:playerId" />
+          <Route element={<ParentOverviewPage />} path="parent" />
+          <Route element={<ParentPlayersPage />} path="parent/players" />
+          <Route element={<ParentPlayerDetailPage />} path="parent/players/:playerId" />
         </Route>
       </Route>
 
       <Route element={<ProtectedRoute allow={["coach"]} />}>
         <Route element={<AppShell />}>
-          <Route element={<CoachOverviewPage />} path="/coach" />
-          <Route element={<CoachRosterPage />} path="/coach/roster" />
-          <Route element={<CoachPlayerDetailPage />} path="/coach/players/:playerId" />
-          <Route element={<CoachSchedulePage />} path="/coach/schedule" />
+          <Route element={<CoachOverviewPage />} path="coach" />
+          <Route element={<CoachRosterPage />} path="coach/roster" />
+          <Route element={<CoachPlayerDetailPage />} path="coach/players/:playerId" />
+          <Route element={<CoachSchedulePage />} path="coach/schedule" />
         </Route>
       </Route>
 
       <Route element={<ProtectedRoute allow={["recruiter"]} />}>
         <Route element={<AppShell />}>
-          <Route element={<RecruiterTournamentBrowserPage />} path="/recruiter" />
-          <Route element={<RecruiterTournamentDetailPage />} path="/recruiter/tournaments/:tournamentId" />
-          <Route element={<RecruiterGameDetailPage />} path="/recruiter/games/:gameId" />
-          <Route element={<RecruiterPlayerDetailPage />} path="/recruiter/players/:playerId" />
-          <Route element={<RecruiterFavoritesPage />} path="/recruiter/favorites" />
-          <Route element={<RecruiterSavedClipsPage />} path="/recruiter/saved-clips" />
+          <Route element={<RecruiterTournamentBrowserPage />} path="recruiter" />
+          <Route element={<RecruiterTournamentDetailPage />} path="recruiter/tournaments/:tournamentId" />
+          <Route element={<RecruiterGameDetailPage />} path="recruiter/games/:gameId" />
+          <Route element={<RecruiterPlayerDetailPage />} path="recruiter/players/:playerId" />
+          <Route element={<RecruiterFavoritesPage />} path="recruiter/favorites" />
+          <Route element={<RecruiterSavedClipsPage />} path="recruiter/saved-clips" />
         </Route>
       </Route>
 

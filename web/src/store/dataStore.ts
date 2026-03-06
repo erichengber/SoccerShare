@@ -624,6 +624,10 @@ export const useDataStore = create<DataState>((set, get) => ({
     });
   },
   completePlayerOnboarding: (input) => {
+    // Supabase handoff note:
+    // - Replace this local onboarding write with a DB mutation (profiles/players row update).
+    // - Persist avatar URL from Storage and onboarding fields in one transaction/RPC when possible.
+    // - Keep team membership sync (`team_id` relation or join table) consistent with existing reads.
     const { data } = get();
     const player = data.players.find((entry) => entry.id === input.playerId);
     if (!player) {

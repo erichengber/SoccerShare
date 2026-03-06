@@ -15,18 +15,29 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setIsSubmitting(true);
 
-    const result = login(email, password);
-    if (!result.success || !result.role) {
-      setError(result.error ?? "Unable to sign in.");
+    try {
+      const result = await login(email, password);
+      if (!result.success || !result.role) {
+        setError(result.error ?? "Unable to sign in.");
+        return;
+      }
+
+    if (result.onboardingRequired) {
+      navigate("/onboarding/player");
       return;
     }
 
     navigate(getHomePathForRole(result.role));
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -45,6 +56,7 @@ export function LoginPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   autoComplete="email"
+                  disabled={isSubmitting}
                   id="email"
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="you@school.org"
@@ -58,6 +70,7 @@ export function LoginPage() {
                 <Label htmlFor="password">Password</Label>
                 <Input
                   autoComplete="current-password"
+                  disabled={isSubmitting}
                   id="password"
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Enter password"
@@ -69,7 +82,7 @@ export function LoginPage() {
 
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-              <Button className="w-full" type="submit">
+              <Button className="w-full" disabled={isSubmitting} type="submit">
                 Sign In
               </Button>
             </form>

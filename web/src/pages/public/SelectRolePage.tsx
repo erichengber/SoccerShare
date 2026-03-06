@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,7 +25,7 @@ const roleDescriptions: Record<UserRole, string> = {
 
 export function SelectRolePage() {
   const navigate = useNavigate();
-  const { selectRole } = useAuthStore();
+  const { user, isLoading, selectRole } = useAuthStore();
   const { data } = useDataStore();
 
   const [role, setRole] = useState<UserRole>("player");
@@ -43,8 +43,13 @@ export function SelectRolePage() {
 
   const selectedUserId = selectedUserByRole[role];
 
-  function handleContinue() {
-    selectRole(role, selectedUserId);
+  if (!user) {
+    return <Navigate replace to="/" />;
+  }
+
+  async function handleContinue() {
+    const maybeError = await selectRole(role, selectedUserId);
+    if (maybeError) return;
     navigate(getHomePathForRole(role));
   }
 
@@ -54,7 +59,7 @@ export function SelectRolePage() {
         <div>
           <h1 className="text-3xl font-semibold">Select Demo Role</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Choose one session role and demo user to preview the product workflow.
+            Choose one role and matching demo user mapping for your authenticated session.
           </p>
         </div>
 
@@ -107,7 +112,7 @@ export function SelectRolePage() {
             </div>
 
             <Button className="w-full" onClick={handleContinue}>
-              Continue as {role}
+              {isLoading ? "Saving..." : `Continue as ${role}`}
             </Button>
           </CardContent>
         </Card>
