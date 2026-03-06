@@ -4,8 +4,8 @@ Contribution to the Project Development Process
 - This week I helped create the Supabase tables and made sure it works similar to mock data.
 Demonstration of Applied Knowledge
 - I demonstrated applied knowledge by using the Supabase CLI and creating SQL files in order to update the Supabase with ease. I needed to learn about how to use the Supabase CLI in order to get it to work
-Reflection and Lessons Learned
-After creating the tables I learned more about SQL and the Supabase CLI. This allowed for a streamlined process in order to complete the task of create the Supabase table for data
+  Reflection and Lessons Learned
+  After creating the tables I learned more about SQL and the Supabase CLI. This allowed for a streamlined process in order to complete the task of create the Supabase table for data
 
 
 

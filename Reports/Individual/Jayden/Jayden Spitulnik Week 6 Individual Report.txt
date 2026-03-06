@@ -1,0 +1,11 @@
+Time Dedicated to the Project
+- This week I committed 4 hours to the project. I worked on moving player privacy controls to the parent workflow, adding coach-to-player invite functionality, and adding coach-managed schedule creation.
+
+Contribution to the Project Development Process
+- I contributed by implementing and testing three workflow updates that align with our sponsor goals: parent-owned privacy controls, invite acceptance by player/parent, and coach-added games. I also updated related UI copy and navigation so role responsibilities are clear across the app.
+
+Demonstration of Applied Knowledge
+- I demonstrated my knowledge by extending our TypeScript domain models and Zustand state logic to support new relational behaviors (team invites, invite status transitions, and roster updates on acceptance). I also validated edge cases like duplicate invites, invalid responses, and opponent-team scheduling constraints.
+
+Reflection and Lessons Learned
+- This week reinforced that role-based systems require both UI and data-layer changes to stay consistent. I learned the value of implementing complete end-to-end flows (state, validation, and screens) instead of isolated UI updates, because that gives the team a more realistic MVP path when connecting to Supabase.

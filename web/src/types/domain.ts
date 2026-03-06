@@ -58,7 +58,7 @@ export interface Parent extends UserBase {
 
 export interface Coach extends UserBase {
   role: "coach";
-  teamId: string;
+  teamId?: string;
   schoolId?: string;
 }
 
@@ -93,6 +93,7 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   gameIds: string[];
+  createdByCoachId?: string;
 }
 
 export interface Game {
@@ -102,6 +103,7 @@ export interface Game {
   location: string;
   homeTeamId: string;
   awayTeamId: string;
+  createdByCoachId?: string;
 }
 
 export interface Clip {
@@ -125,6 +127,21 @@ export interface SampleVideoOption {
   posterUrl: string;
 }
 
+export type TeamInviteStatus = "pending" | "accepted" | "declined";
+
+export type TeamInviteResponderRole = "player" | "parent";
+
+export interface TeamInvite {
+  id: string;
+  teamId: string;
+  playerId: string;
+  invitedByCoachId: string;
+  status: TeamInviteStatus;
+  createdAt: string;
+  respondedAt?: string;
+  respondedByRole?: TeamInviteResponderRole;
+}
+
 export interface AppData {
   users: User[];
   players: Player[];
@@ -136,6 +153,7 @@ export interface AppData {
   tournaments: Tournament[];
   games: Game[];
   clips: Clip[];
+  teamInvites: TeamInvite[];
   sampleVideos: SampleVideoOption[];
 }
 
@@ -155,6 +173,43 @@ export interface ClipUpdateInput {
   clipId: string;
   tags: ClipTag[];
   notes: string;
+}
+
+export interface TeamInviteResponseInput {
+  inviteId: string;
+  responderRole: TeamInviteResponderRole;
+  responderId: string;
+  accept: boolean;
+}
+
+export interface CoachGameInput {
+  opponentTeamId: string;
+  date: string;
+  location: string;
+  homeOrAway: "home" | "away";
+  tournamentId?: string;
+}
+
+export interface CreateCoachTeamInput {
+  name: string;
+  level: TeamLevel;
+  schoolId?: string;
+}
+
+export interface PlayerOnboardingInput {
+  playerId: string;
+  position: PlayerPosition;
+  jerseyNumber: number;
+  teamId: string;
+  bio: string;
+  avatarUrl: string;
+}
+
+export interface CoachTournamentInput {
+  name: string;
+  location: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface RecruiterFilters {

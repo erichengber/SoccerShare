@@ -37,7 +37,7 @@ function isParentLinkedToPlayer(data: AppData, parentId: string, player: Player)
 
 function isCoachLinkedToPlayer(data: AppData, coachId: string, player: Player) {
   const coach = getCoachById(data, coachId);
-  return coach ? player.teamIds.includes(coach.teamId) : false;
+  return coach?.teamId ? player.teamIds.includes(coach.teamId) : false;
 }
 
 export function canViewPlayer(

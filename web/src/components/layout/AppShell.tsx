@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,7 @@ const navByRole: Record<UserRole, { label: string; path: string }[]> = {
     { label: "Overview", path: "/player" },
     { label: "Profile", path: "/player/profile" },
     { label: "Clips", path: "/player/clips" },
-    { label: "Schedule", path: "/player/schedule" },
-    { label: "Privacy", path: "/player/settings/privacy" }
+    { label: "Schedule", path: "/player/schedule" }
   ],
   parent: [
     { label: "Overview", path: "/parent" },
@@ -82,7 +82,7 @@ export function AppShell() {
           </nav>
           <Separator className="my-3" />
           <p className="px-3 text-xs text-muted-foreground">
-            MVP mode with mock data only. Supabase integration points are pre-marked in stores.
+            MVP mode with mock data plus coach team creation synced to Supabase.
           </p>
         </aside>
 

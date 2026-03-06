@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useAuthStore } from "@/store/authStore";
@@ -9,7 +8,7 @@ import { useDataStore } from "@/store/dataStore";
 
 export function PrivacySettingsPage() {
   const { selectedUserId } = useAuthStore();
-  const { data, setPlayerPrivacy } = useDataStore();
+  const { data } = useDataStore();
 
   const player = data.players.find((entry) => entry.id === selectedUserId);
   const isPublic = useMemo(() => player?.privacy === "public", [player]);
@@ -21,7 +20,7 @@ export function PrivacySettingsPage() {
   return (
     <div>
       <PageHeader
-        description="Privacy is absolute and applies to your full profile and clips."
+        description="Visibility applies to your full profile and clips."
         title="Privacy Settings"
       />
 
@@ -36,17 +35,9 @@ export function PrivacySettingsPage() {
             non-linked users.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Button disabled={isPublic} onClick={() => setPlayerPrivacy(player.id, "public")}>
-            Set Public
-          </Button>
-          <Button
-            disabled={!isPublic}
-            onClick={() => setPlayerPrivacy(player.id, "private")}
-            variant="outline"
-          >
-            Set Private
-          </Button>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>Privacy changes are managed by a linked parent account.</p>
+          <p>Ask a parent to open your profile from the parent workflow and update visibility there.</p>
         </CardContent>
       </Card>
     </div>

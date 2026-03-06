@@ -1,16 +1,447 @@
 import { create } from "zustand";
 import { mockData } from "@/data/mockData";
-import type { AppData, Clip, ClipUploadInput, ClipUpdateInput, PlayerPrivacy } from "@/types/domain";
+import { createCoachTeamInSupabase, fetchCoachTeamFromSupabase } from "@/lib/teamClient";
+import type {
+  AppData,
+  Clip,
+  ClipUploadInput,
+  ClipUpdateInput,
+  Coach,
+  CoachGameInput,
+  CreateCoachTeamInput,
+  CoachTournamentInput,
+  Player,
+  PlayerOnboardingInput,
+  PlayerPrivacy,
+  Team,
+  TeamInvite,
+  TeamInviteResponseInput
+} from "@/types/domain";
+
+interface ActionResult {
+  success: boolean;
+  error?: string;
+}
+
+type AsyncActionResult = Promise<ActionResult>;
 
 interface DataState {
   data: AppData;
+  createCoachTeam: (coachId: string, input: CreateCoachTeamInput) => AsyncActionResult;
+  syncCoachTeamFromSupabase: (coachId: string) => AsyncActionResult;
+  invitePlayerToTeam: (coachId: string, playerId: string) => ActionResult;
+  respondToTeamInvite: (input: TeamInviteResponseInput) => ActionResult;
+  addCoachGame: (coachId: string, input: CoachGameInput) => ActionResult;
+  addCoachTournament: (coachId: string, input: CoachTournamentInput) => ActionResult;
   uploadClip: (input: ClipUploadInput) => void;
   updateClip: (input: ClipUpdateInput) => void;
   setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => void;
+  completePlayerOnboarding: (input: PlayerOnboardingInput) => ActionResult;
 }
 
-export const useDataStore = create<DataState>((set) => ({
+function addTeamToPlayer(player: Player, teamId: string): Player {
+  if (player.teamIds.includes(teamId)) return player;
+  return { ...player, teamIds: [...player.teamIds, teamId] };
+}
+
+function upsertTeam(teams: Team[], team: Team): Team[] {
+  const existingTeamIndex = teams.findIndex((entry) => entry.id === team.id);
+  if (existingTeamIndex === -1) {
+    return [team, ...teams];
+  }
+
+  return teams.map((entry) => (entry.id === team.id ? team : entry));
+}
+
+function applyCoachTeamAssignment(
+  data: AppData,
+  coachId: string,
+  nextTeamId: string | undefined,
+  schoolId: string | undefined
+) {
+  const currentCoach = data.coaches.find((coach) => coach.id === coachId);
+  const previousTeamId = currentCoach?.teamId;
+
+  const teams = data.teams.map((team) => {
+    if (previousTeamId && team.id === previousTeamId && previousTeamId !== nextTeamId) {
+      return {
+        ...team,
+        coachIds: team.coachIds.filter((id) => id !== coachId)
+      };
+    }
+
+    if (nextTeamId && team.id === nextTeamId && !team.coachIds.includes(coachId)) {
+      return {
+        ...team,
+        coachIds: [...team.coachIds, coachId]
+      };
+    }
+
+    return team;
+  });
+
+  const coaches = data.coaches.map((coach) =>
+    coach.id === coachId
+      ? {
+          ...coach,
+          teamId: nextTeamId,
+          schoolId
+        }
+      : coach
+  );
+  const users = data.users.map((user) =>
+    user.role === "coach" && user.id === coachId
+      ? {
+          ...user,
+          teamId: nextTeamId,
+          schoolId
+        }
+      : user
+  );
+
+  return {
+    ...data,
+    teams,
+    coaches: coaches as Coach[],
+    users
+  };
+}
+
+export const useDataStore = create<DataState>((set, get) => ({
   data: mockData,
+  createCoachTeam: async (coachId, input) => {
+    const { data } = get();
+    const coach = data.coaches.find((entry) => entry.id === coachId);
+    if (!coach) {
+      return { success: false, error: "Coach not found." };
+    }
+
+    const teamName = input.name.trim();
+    if (!teamName) {
+      return { success: false, error: "Team name is required." };
+    }
+
+    const schoolId = input.schoolId?.trim() || undefined;
+    if (schoolId && !data.schools.some((school) => school.id === schoolId)) {
+      return { success: false, error: "Selected school is invalid." };
+    }
+
+    const createResult = await createCoachTeamInSupabase({
+      coachId,
+      name: teamName,
+      level: input.level,
+      schoolId
+    });
+
+    if (!createResult.data?.team) {
+      return {
+        success: false,
+        error: createResult.error ?? "Unable to create team."
+      };
+    }
+
+    const createdTeam = createResult.data.team;
+
+    set((state) => {
+      const nextDataWithAssignment = applyCoachTeamAssignment(
+        state.data,
+        coachId,
+        createdTeam.id,
+        createdTeam.schoolId
+      );
+
+      return {
+        data: {
+          ...nextDataWithAssignment,
+          teams: upsertTeam(nextDataWithAssignment.teams, {
+            ...createdTeam,
+            coachIds: createdTeam.coachIds.includes(coachId)
+              ? createdTeam.coachIds
+              : [...createdTeam.coachIds, coachId]
+          })
+        }
+      };
+    });
+
+    return { success: true };
+  },
+  syncCoachTeamFromSupabase: async (coachId) => {
+    const { data } = get();
+    if (!data.coaches.some((entry) => entry.id === coachId)) {
+      return { success: false, error: "Coach not found." };
+    }
+
+    const syncResult = await fetchCoachTeamFromSupabase(coachId);
+    if (!syncResult.data) {
+      return {
+        success: false,
+        error: syncResult.error ?? "Unable to sync coach team."
+      };
+    }
+
+    set((state) => {
+      const assignedData = applyCoachTeamAssignment(
+        state.data,
+        coachId,
+        syncResult.data?.teamId,
+        syncResult.data?.schoolId
+      );
+
+      if (!syncResult.data?.team) {
+        return { data: assignedData };
+      }
+
+      return {
+        data: {
+          ...assignedData,
+          teams: upsertTeam(
+            assignedData.teams,
+            syncResult.data.team.coachIds.includes(coachId)
+              ? syncResult.data.team
+              : {
+                  ...syncResult.data.team,
+                  coachIds: [...syncResult.data.team.coachIds, coachId]
+                }
+          )
+        }
+      };
+    });
+
+    return { success: true };
+  },
+  invitePlayerToTeam: (coachId, playerId) => {
+    const { data } = get();
+    const coach = data.coaches.find((entry) => entry.id === coachId);
+    if (!coach) {
+      return { success: false, error: "Coach not found." };
+    }
+    if (!coach.teamId) {
+      return { success: false, error: "Create a team before inviting players." };
+    }
+
+    const player = data.players.find((entry) => entry.id === playerId);
+    if (!player) {
+      return { success: false, error: "Player not found." };
+    }
+
+    if (player.teamIds.includes(coach.teamId)) {
+      return { success: false, error: "Player is already on this team." };
+    }
+
+    const hasPendingInvite = data.teamInvites.some(
+      (invite) =>
+        invite.playerId === playerId &&
+        invite.teamId === coach.teamId &&
+        invite.status === "pending"
+    );
+    if (hasPendingInvite) {
+      return { success: false, error: "An invite is already pending for this player." };
+    }
+
+    const invite: TeamInvite = {
+      id: `invite-${Date.now()}`,
+      teamId: coach.teamId,
+      playerId,
+      invitedByCoachId: coachId,
+      status: "pending",
+      createdAt: new Date().toISOString()
+    };
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        teamInvites: [invite, ...state.data.teamInvites]
+      }
+    }));
+
+    return { success: true };
+  },
+  respondToTeamInvite: ({ inviteId, responderRole, responderId, accept }) => {
+    const { data } = get();
+    const invite = data.teamInvites.find((entry) => entry.id === inviteId);
+    if (!invite) {
+      return { success: false, error: "Invite not found." };
+    }
+
+    if (invite.status !== "pending") {
+      return { success: false, error: "This invite has already been handled." };
+    }
+
+    const player = data.players.find((entry) => entry.id === invite.playerId);
+    if (!player) {
+      return { success: false, error: "Invited player no longer exists." };
+    }
+
+    if (responderRole === "player" && responderId !== player.id) {
+      return { success: false, error: "Players can only respond to their own invites." };
+    }
+
+    if (responderRole === "parent") {
+      const parent = data.parents.find((entry) => entry.id === responderId);
+      if (!parent || !parent.playerIds.includes(player.id)) {
+        return { success: false, error: "Parent is not linked to this player." };
+      }
+    }
+
+    const nextStatus: TeamInvite["status"] = accept ? "accepted" : "declined";
+
+    set((state) => {
+      const teamInvites = state.data.teamInvites.map((entry) =>
+        entry.id === inviteId
+          ? {
+              ...entry,
+              status: nextStatus,
+              respondedAt: new Date().toISOString(),
+              respondedByRole: responderRole
+            }
+          : entry
+      );
+
+      if (!accept) {
+        return {
+          data: {
+            ...state.data,
+            teamInvites
+          }
+        };
+      }
+
+      const players = state.data.players.map((entry) =>
+        entry.id === invite.playerId ? addTeamToPlayer(entry, invite.teamId) : entry
+      );
+      const teams = state.data.teams.map((team) =>
+        team.id === invite.teamId && !team.playerIds.includes(invite.playerId)
+          ? { ...team, playerIds: [...team.playerIds, invite.playerId] }
+          : team
+      );
+      const users = state.data.users.map((user) =>
+        user.role === "player" && user.id === invite.playerId
+          ? addTeamToPlayer(user, invite.teamId)
+          : user
+      );
+
+      return {
+        data: {
+          ...state.data,
+          players,
+          teams,
+          users,
+          teamInvites
+        }
+      };
+    });
+
+    return { success: true };
+  },
+  addCoachGame: (coachId, input) => {
+    const { data } = get();
+    const coach = data.coaches.find((entry) => entry.id === coachId);
+    if (!coach) {
+      return { success: false, error: "Coach not found." };
+    }
+    if (!coach.teamId) {
+      return { success: false, error: "Create a team before adding games." };
+    }
+
+    const opponentTeam = data.teams.find((entry) => entry.id === input.opponentTeamId);
+    if (!opponentTeam) {
+      return { success: false, error: "Opponent team not found." };
+    }
+
+    if (input.opponentTeamId === coach.teamId) {
+      return { success: false, error: "Opponent team must be different from your team." };
+    }
+
+    const date = new Date(input.date);
+    if (Number.isNaN(date.getTime())) {
+      return { success: false, error: "Please enter a valid game date and time." };
+    }
+
+    const location = input.location.trim();
+    if (!location) {
+      return { success: false, error: "Location is required." };
+    }
+
+    const isHome = input.homeOrAway === "home";
+    const gameId = `game-${Date.now()}`;
+    const newGame = {
+      id: gameId,
+      tournamentId: input.tournamentId,
+      date: date.toISOString(),
+      location,
+      homeTeamId: isHome ? coach.teamId : input.opponentTeamId,
+      awayTeamId: isHome ? input.opponentTeamId : coach.teamId,
+      createdByCoachId: coachId
+    };
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        games: [newGame, ...state.data.games],
+        tournaments: input.tournamentId
+          ? state.data.tournaments.map((tournament) =>
+              tournament.id === input.tournamentId &&
+              !tournament.gameIds.includes(gameId)
+                ? { ...tournament, gameIds: [...tournament.gameIds, gameId] }
+                : tournament
+            )
+          : state.data.tournaments
+      }
+    }));
+
+    return { success: true };
+  },
+  addCoachTournament: (coachId, input) => {
+    const { data } = get();
+    const coach = data.coaches.find((entry) => entry.id === coachId);
+    if (!coach) {
+      return { success: false, error: "Coach not found." };
+    }
+
+    const name = input.name.trim();
+    if (!name) {
+      return { success: false, error: "Tournament name is required." };
+    }
+
+    const location = input.location.trim();
+    if (!location) {
+      return { success: false, error: "Tournament location is required." };
+    }
+
+    const startDate = new Date(input.startDate);
+    if (Number.isNaN(startDate.getTime())) {
+      return { success: false, error: "Please enter a valid tournament start date." };
+    }
+
+    const endDate = new Date(input.endDate);
+    if (Number.isNaN(endDate.getTime())) {
+      return { success: false, error: "Please enter a valid tournament end date." };
+    }
+
+    if (endDate < startDate) {
+      return { success: false, error: "Tournament end date must be on or after the start date." };
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        tournaments: [
+          {
+            id: `tournament-${Date.now()}`,
+            name,
+            location,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            gameIds: [],
+            createdByCoachId: coachId
+          },
+          ...state.data.tournaments
+        ]
+      }
+    }));
+
+    return { success: true };
+  },
   uploadClip: (input) => {
     set((state) => {
       const newClip: Clip = {
@@ -19,7 +450,9 @@ export const useDataStore = create<DataState>((set) => ({
         ...input
       };
 
-      // Future Supabase integration point: replace in-memory append with insert RPC/API call.
+      // Future Supabase integration point:
+      // 1) Upload local file to Supabase Storage and capture the public/signed URL.
+      // 2) Persist clip metadata row instead of in-memory append.
       return {
         data: {
           ...state.data,
@@ -44,7 +477,6 @@ export const useDataStore = create<DataState>((set) => ({
   },
   setPlayerPrivacy: (playerId, privacy) => {
     set((state) => {
-      // Future Supabase integration point: persist privacy at player profile table.
       const players = state.data.players.map((player) =>
         player.id === playerId ? { ...player, privacy } : player
       );
@@ -60,5 +492,93 @@ export const useDataStore = create<DataState>((set) => ({
         }
       };
     });
+  },
+  completePlayerOnboarding: (input) => {
+    // Supabase handoff note:
+    // - Replace this local onboarding write with a DB mutation (profiles/players row update).
+    // - Persist avatar URL from Storage and onboarding fields in one transaction/RPC when possible.
+    // - Keep team membership sync (`team_id` relation or join table) consistent with existing reads.
+    const { data } = get();
+    const player = data.players.find((entry) => entry.id === input.playerId);
+    if (!player) {
+      return { success: false, error: "Player not found." };
+    }
+
+    const team = data.teams.find((entry) => entry.id === input.teamId);
+    if (!team) {
+      return { success: false, error: "Selected team was not found." };
+    }
+
+    if (!Number.isInteger(input.jerseyNumber) || input.jerseyNumber < 0 || input.jerseyNumber > 99) {
+      return { success: false, error: "Jersey number must be between 0 and 99." };
+    }
+
+    const bio = input.bio.trim();
+    if (!bio) {
+      return { success: false, error: "Profile summary is required." };
+    }
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    set((state) => {
+      const nextTeamIds = [input.teamId];
+      const players = state.data.players.map((entry) =>
+        entry.id === input.playerId
+          ? {
+              ...entry,
+              position: input.position,
+              jerseyNumber: input.jerseyNumber,
+              teamIds: nextTeamIds,
+              bio,
+              avatarUrl
+            }
+          : entry
+      );
+      const users = state.data.users.map((entry) =>
+        entry.id === input.playerId && entry.role === "player"
+          ? {
+              ...entry,
+              position: input.position,
+              jerseyNumber: input.jerseyNumber,
+              teamIds: nextTeamIds,
+              bio,
+              avatarUrl
+            }
+          : entry
+      );
+      const teams = state.data.teams.map((entry) => {
+        const shouldContainPlayer = entry.id === input.teamId;
+        const currentlyContainsPlayer = entry.playerIds.includes(input.playerId);
+
+        if (shouldContainPlayer && !currentlyContainsPlayer) {
+          return {
+            ...entry,
+            playerIds: [...entry.playerIds, input.playerId]
+          };
+        }
+
+        if (!shouldContainPlayer && currentlyContainsPlayer) {
+          return {
+            ...entry,
+            playerIds: entry.playerIds.filter((id) => id !== input.playerId)
+          };
+        }
+
+        return entry;
+      });
+
+      return {
+        data: {
+          ...state.data,
+          players,
+          users,
+          teams
+        }
+      };
+    });
+
+    return { success: true };
   }
 }));

@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { ClipCard } from "@/components/cards/ClipCard";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/store/authStore";
@@ -10,7 +12,8 @@ import { getTeamName } from "@/lib/selectors";
 
 export function PlayerOverviewPage() {
   const { selectedUserId } = useAuthStore();
-  const { data } = useDataStore();
+  const { data, respondToTeamInvite } = useDataStore();
+  const [inviteMessage, setInviteMessage] = useState<string>();
 
   const player = data.players.find((entry) => entry.id === selectedUserId);
 
@@ -23,6 +26,9 @@ export function PlayerOverviewPage() {
 
   const relatedGames = data.games.filter((game) =>
     player.teamIds.includes(game.homeTeamId) || player.teamIds.includes(game.awayTeamId)
+  );
+  const pendingInvites = data.teamInvites.filter(
+    (invite) => invite.playerId === player.id && invite.status === "pending"
   );
 
   return (
@@ -63,6 +69,60 @@ export function PlayerOverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      {pendingInvites.length ? (
+        <section className="mt-6 rounded-xl border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Team Invites</h2>
+            <Badge variant="secondary">{pendingInvites.length} pending</Badge>
+          </div>
+          <div className="mt-3 space-y-3">
+            {pendingInvites.map((invite) => {
+              const teamName = getTeamName(data, invite.teamId);
+              return (
+                <div className="rounded-lg border p-3" key={invite.id}>
+                  <p className="text-sm font-medium">{teamName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Invite sent {new Date(invite.createdAt).toLocaleDateString()}
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      onClick={() => {
+                        const result = respondToTeamInvite({
+                          inviteId: invite.id,
+                          responderRole: "player",
+                          responderId: player.id,
+                          accept: true
+                        });
+                        setInviteMessage(result.success ? "Invite accepted." : result.error ?? "Unable to respond.");
+                      }}
+                      size="sm"
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const result = respondToTeamInvite({
+                          inviteId: invite.id,
+                          responderRole: "player",
+                          responderId: player.id,
+                          accept: false
+                        });
+                        setInviteMessage(result.success ? "Invite declined." : result.error ?? "Unable to respond.");
+                      }}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Decline
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+            {inviteMessage ? <p className="text-sm text-muted-foreground">{inviteMessage}</p> : null}
+          </div>
+        </section>
+      ) : null}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <section>

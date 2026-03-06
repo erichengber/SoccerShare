@@ -40,6 +40,11 @@ export function PlayerCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <img
+          alt={`${player.firstName} ${player.lastName}`}
+          className="h-24 w-24 rounded-full border object-cover"
+          src={player.avatarUrl}
+        />
         <p className="text-sm text-muted-foreground line-clamp-2">{player.bio}</p>
         <div className="flex flex-wrap gap-2">
           {teamNames.map((team) => (

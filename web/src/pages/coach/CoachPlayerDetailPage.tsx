@@ -16,8 +16,17 @@ export function CoachPlayerDetailPage() {
   if (!coach) {
     return <EmptyState description="Select a valid coach demo user." title="Coach not found" />;
   }
+  if (!coach.teamId) {
+    return (
+      <EmptyState
+        description="Create a team from Coach Overview before viewing player details."
+        title="No team linked"
+      />
+    );
+  }
+  const coachTeamId = coach.teamId;
 
-  const player = data.players.find((entry) => entry.id === playerId && entry.teamIds.includes(coach.teamId));
+  const player = data.players.find((entry) => entry.id === playerId && entry.teamIds.includes(coachTeamId));
   if (!player) {
     return <EmptyState description="You can only view players on your own roster." title="No access" />;
   }
