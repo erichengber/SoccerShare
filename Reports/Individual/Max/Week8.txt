@@ -1,0 +1,8 @@
+Time Dedicated to the Project
+This week I spent around 4 hours making the landing page configured with User Authentication. Then a demo user can be selected. 
+Contribution to the Project Development Process
+This week I helped create the Supabase account registration making sure an user could be added. A demo user would be selected after registering an account
+Demonstration of Applied Knowledge
+I demonstrated applied knowledge by using the Supabase documentation to learn how to create the landing page to sync with the Supabase server.
+Reflection and Lessons Learned
+After setting up the Supabase authentication, I learned the importance of setting up a plan and creating the landing page for users to authenticate.

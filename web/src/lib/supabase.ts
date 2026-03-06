@@ -28,7 +28,10 @@ function isLikelySupabaseClientKey(key?: string) {
 
 export const isSupabaseConfigured =
   isLikelySupabaseUrl(supabaseUrl) && isLikelySupabaseClientKey(supabaseAnonKey);
-export const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null;
+export const supabase =
+  isSupabaseConfigured && supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
 
 function requireSupabaseClient() {
   if (!supabase) {
