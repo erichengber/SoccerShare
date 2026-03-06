@@ -25,6 +25,10 @@ web/lerna-debug.log*
 # Public assets
 web/public/
 
+# Supabase local project files
+supabase/
+web/supabase/
+
 # Local environment files (keep templates like .env.example tracked)
 web/.env
 web/.env.*
