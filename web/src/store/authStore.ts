@@ -1,369 +1,145 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import {
-  buildDefaultAccounts,
-  loginWithPassword,
-  registerWithPassword,
-  type AuthAccount,
-  type RegisterAccountInput
-} from "@/lib/authClient";
-import {
-  fetchProfile,
-  isSupabaseConfigured,
-  supabaseAuth,
-  upsertProfile,
-  type ProfileRow
-} from "@/lib/supabase";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseClient";
 import type { UserRole } from "@/types/domain";
 
-const VALID_ROLES: UserRole[] = ["player", "parent", "coach", "recruiter"];
-
-function formatSupabaseAuthError(error: unknown, fallback: string) {
-  const status =
-    typeof error === "object" && error !== null && "status" in error
-      ? Number((error as { status?: number }).status)
-      : undefined;
-  const message = error instanceof Error ? error.message : fallback;
-
-  if (status === 401 || /unauthorized|invalid api key|apikey/i.test(message)) {
-    return "Supabase returned 401 Unauthorized. Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY (or VITE_SUPABASE_ANON_KEY), and ensure Email/Password auth (and signups) are enabled in Supabase Auth settings.";
-  }
-
-  if (/email_address_invalid|email address .* is invalid/i.test(message)) {
-    return "That email address is not accepted by Supabase. Use a real email domain (not example.com).";
-  }
-
-  return message;
-}
-
-function buildProfileFromMetadata(user: {
-  id: string;
-  user_metadata?: Record<string, unknown> | null;
-}): ProfileRow | null {
-  const metadata = user.user_metadata ?? {};
-  const role = metadata.role;
-  const linkedUserId = metadata.linked_user_id;
-
-  if (typeof role !== "string" || !VALID_ROLES.includes(role as UserRole)) {
-    return null;
-  }
-
-  if (typeof linkedUserId !== "string" || !linkedUserId.trim()) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    role: role as UserRole,
-    linked_user_id: linkedUserId
-  };
-}
-
-async function resolveProfileForUser(user: {
-  id: string;
-  user_metadata?: Record<string, unknown> | null;
-}): Promise<ProfileRow | null> {
-  const existingProfile = await fetchProfile(user.id);
-  if (existingProfile) {
-    return existingProfile;
-  }
-
-  const metadataProfile = buildProfileFromMetadata(user);
-  if (!metadataProfile) {
-    return null;
-  }
-
-  return upsertProfile(metadataProfile);
-}
-
-interface AuthActionResult {
-  success: boolean;
-  error?: string;
-  role?: UserRole;
-  onboardingRequired?: boolean;
-}
+type AuthMetadata = {
+  selected_role?: UserRole;
+  selected_user_id?: string;
+};
 
 interface AuthState {
   isInitialized: boolean;
+  isLoading: boolean;
+  user: User | null;
+  session: Session | null;
   selectedRole?: UserRole;
   selectedUserId?: string;
-  authEmail?: string;
-  mode?: "demo" | "mock" | "supabase";
-  supabaseUserId?: string;
-  accounts: Record<string, AuthAccount>;
-  onboardingCompleteByUserId: Record<string, boolean>;
-  selectRole: (role: UserRole, userId: string) => void;
-  clearSession: () => void;
-  login: (email: string, password: string) => AuthActionResult;
-  register: (input: RegisterAccountInput) => AuthActionResult;
-  markOnboardingComplete: (userId: string) => void;
-  isOnboardingComplete: (userId: string) => boolean;
+  error?: string;
   initialize: () => Promise<void>;
-  selectRole: (role: UserRole, userId: string) => void;
-  clearSession: () => Promise<void>;
-  login: (email: string, password: string) => Promise<AuthActionResult>;
-  register: (input: RegisterAccountInput) => Promise<AuthActionResult>;
+  signInWithEmail: (email: string, password: string) => Promise<string | undefined>;
+  signUpWithEmail: (email: string, password: string) => Promise<string | undefined>;
+  selectRole: (role: UserRole, userId: string) => Promise<string | undefined>;
+  signOut: () => Promise<void>;
+  clearError: () => void;
 }
 
-const defaultAccounts = buildDefaultAccounts();
-// Supabase handoff note:
-// - `onboardingCompleteByUserId` is local-only session state for MVP.
-// - Replace with a DB-backed onboarding flag/derived check from the profile row.
-// - On login, fetch profile completion from Supabase and drive `onboardingRequired` from that source.
-const defaultOnboardingCompletionByUserId = Object.values(defaultAccounts).reduce<Record<string, boolean>>(
-  (acc, account) => {
-    acc[account.userId] = true;
-    return acc;
-  },
-  {}
-);
+function parseRoleFromMetadata(user: User | null): UserRole | undefined {
+  const role = (user?.user_metadata as AuthMetadata | undefined)?.selected_role;
+  return role === "player" || role === "parent" || role === "coach" || role === "recruiter"
+    ? role
+    : undefined;
+}
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      isInitialized: false,
-      selectedRole: undefined,
-      selectedUserId: undefined,
-      authEmail: undefined,
-      mode: undefined,
-      supabaseUserId: undefined,
-      accounts: defaultAccounts,
-      onboardingCompleteByUserId: defaultOnboardingCompletionByUserId,
-      selectRole: (role, userId) => set({ selectedRole: role, selectedUserId: userId }),
-      clearSession: () =>
-      initialize: async () => {
-        if (!isSupabaseConfigured) {
-          set({ isInitialized: true });
-          return;
-        }
+function parseUserIdFromMetadata(user: User | null): string | undefined {
+  const userId = (user?.user_metadata as AuthMetadata | undefined)?.selected_user_id;
+  return typeof userId === "string" && userId.length > 0 ? userId : undefined;
+}
 
-        try {
-          const sessionResult = await supabaseAuth.getSession();
-          const session = sessionResult.data.session;
-          const user = session?.user;
+export const useAuthStore = create<AuthState>((set, get) => {
+  let hasListener = false;
 
-          if (!user) {
-            set({
-              isInitialized: true,
-              mode: undefined,
-              supabaseUserId: undefined,
-              selectedRole: undefined,
-              selectedUserId: undefined,
-              authEmail: undefined
-            });
-            return;
-          }
+  const applySession = (session: Session | null) => {
+    const user = session?.user ?? null;
+    set({
+      user,
+      session,
+      selectedRole: parseRoleFromMetadata(user),
+      selectedUserId: parseUserIdFromMetadata(user)
+    });
+  };
 
-          const profile = await resolveProfileForUser(user);
-          if (!profile) {
-            set({
-              isInitialized: true,
-              mode: "supabase",
-              supabaseUserId: user.id,
-              authEmail: user.email ?? undefined,
-              selectedRole: undefined,
-              selectedUserId: undefined
-            });
-            return;
-          }
+  return {
+    isInitialized: false,
+    isLoading: false,
+    user: null,
+    session: null,
+    selectedRole: undefined,
+    selectedUserId: undefined,
+    error: undefined,
 
-          set({
-            isInitialized: true,
-            mode: "supabase",
-            supabaseUserId: user.id,
-            authEmail: user.email ?? undefined,
-            selectedRole: profile.role,
-            selectedUserId: profile.linked_user_id
-          });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Unable to initialize session.";
-          set({
-            isInitialized: true,
-            mode: undefined,
-            supabaseUserId: undefined,
-            selectedRole: undefined,
-            selectedUserId: undefined,
-            authEmail: undefined
-          });
-          console.warn(message);
-        }
-      },
-      selectRole: (role, userId) =>
-        set({
-          mode: "demo",
-          selectedRole: role,
-          selectedUserId: userId
-        }),
-      clearSession: async () => {
-        if (get().mode === "supabase" && isSupabaseConfigured) {
-          try {
-            await supabaseAuth.signOut();
-          } catch (error) {
-            const message = error instanceof Error ? error.message : "Unable to sign out.";
-            console.warn(message);
-          }
-        }
+    initialize: async () => {
+      if (get().isInitialized) return;
 
-        set({
-          mode: undefined,
-          supabaseUserId: undefined,
-          selectedRole: undefined,
-          selectedUserId: undefined,
-          authEmail: undefined
+      set({ isLoading: true, error: undefined });
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        set({ error: error.message });
+      }
+
+      applySession(data.session);
+
+      if (!hasListener) {
+        hasListener = true;
+        supabase.auth.onAuthStateChange((_event, session) => {
+          applySession(session);
         });
-      },
-      login: async (email, password) => {
-        if (isSupabaseConfigured) {
-          try {
-            const { data, error } = await supabaseAuth.signIn(email, password);
-            if (error) {
-              return { success: false, error: error.message };
-            }
+      }
 
-            const user = data.user;
-            if (!user) {
-              return { success: false, error: "No user returned from Supabase." };
-            }
+      set({ isInitialized: true, isLoading: false });
+    },
 
-            const profile = await resolveProfileForUser(user);
-            if (!profile) {
-              return {
-                success: false,
-                error:
-                  "Your account is missing a profile mapping (role + linked user). Re-register or ask an admin to set role + linked user for this account."
-              };
-            }
+    signInWithEmail: async (email, password) => {
+      set({ isLoading: true, error: undefined });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      set({ isLoading: false, error: error?.message });
+      return error?.message;
+    },
 
-            set({
-              mode: "supabase",
-              supabaseUserId: user.id,
-              selectedRole: profile.role,
-              selectedUserId: profile.linked_user_id,
-              authEmail: user.email ?? undefined
-            });
+    signUpWithEmail: async (email, password) => {
+      set({ isLoading: true, error: undefined });
+      const { error } = await supabase.auth.signUp({ email, password });
+      set({ isLoading: false, error: error?.message });
+      return error?.message;
+    },
 
-            return { success: true, role: profile.role };
-          } catch (error) {
-            const message = formatSupabaseAuthError(error, "Login failed.");
-            return { success: false, error: message };
-          }
+    selectRole: async (role, userId) => {
+      const { user } = get();
+      if (!user) {
+        const message = "You must sign in before selecting a role.";
+        set({ error: message });
+        return message;
+      }
+
+      set({ isLoading: true, error: undefined });
+      const metadata: AuthMetadata = {
+        selected_role: role,
+        selected_user_id: userId
+      };
+
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          ...(user.user_metadata ?? {}),
+          ...metadata
         }
+      });
 
-        const result = loginWithPassword(get().accounts, email, password);
+      if (error) {
+        set({ isLoading: false, error: error.message });
+        return error.message;
+      }
 
-        if (!result.success || !result.account) {
-          return {
-            success: false,
-            error: result.error ?? "Login failed."
-          };
-        }
+      set({
+        user: data.user,
+        selectedRole: role,
+        selectedUserId: userId,
+        isLoading: false
+      });
+      return undefined;
+    },
 
-        set({
-          mode: "mock",
-          selectedRole: result.account.role,
-          selectedUserId: result.account.userId,
-          authEmail: result.account.email
-        });
+    signOut: async () => {
+      set({ isLoading: true, error: undefined });
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        set({ isLoading: false, error: error.message });
+        return;
+      }
 
-        const onboardingComplete =
-          get().onboardingCompleteByUserId[result.account.userId] ?? result.account.role !== "player";
+      applySession(null);
+      set({ isLoading: false });
+    },
 
-        return {
-          success: true,
-          role: result.account.role,
-          onboardingRequired: result.account.role === "player" && !onboardingComplete
-        };
-      },
-      register: async (input) => {
-        if (isSupabaseConfigured) {
-          try {
-            const { data, error } = await supabaseAuth.signUp(input.email, input.password, {
-              role: input.role,
-              linked_user_id: input.userId
-            });
-            if (error) {
-              return { success: false, error: error.message };
-            }
-
-            if (!data.user) {
-              return { success: false, error: "No user returned from Supabase registration." };
-            }
-
-            if (!data.session) {
-              return {
-                success: true,
-                role: input.role
-              };
-            }
-
-            const profile: ProfileRow = {
-              id: data.user.id,
-              role: input.role,
-              linked_user_id: input.userId
-            };
-
-            await upsertProfile(profile);
-
-            // Keep existing UX: registration goes to /login, so sign out after creating the profile.
-            await supabaseAuth.signOut();
-
-            return { success: true, role: input.role };
-          } catch (error) {
-            const message = formatSupabaseAuthError(error, "Registration failed.");
-            return { success: false, error: message };
-          }
-        }
-
-        const result = registerWithPassword(get().accounts, input);
-
-        if (!result.success || !result.account) {
-          return {
-            success: false,
-            error: result.error ?? "Registration failed."
-          };
-        }
-
-        const account = result.account;
-
-        set((state) => ({
-          selectedRole: account.role,
-          selectedUserId: account.userId,
-          authEmail: account.email,
-          mode: "mock",
-          accounts: {
-            ...state.accounts,
-            [account.email]: account
-          },
-          onboardingCompleteByUserId: {
-            ...state.onboardingCompleteByUserId,
-            [account.userId]: account.role !== "player"
-          }
-        }));
-
-        return {
-          success: true,
-          role: account.role,
-          onboardingRequired: account.role === "player"
-        };
-      },
-      markOnboardingComplete: (userId) =>
-        set((state) => ({
-          onboardingCompleteByUserId: {
-            ...state.onboardingCompleteByUserId,
-            [userId]: true
-          }
-        })),
-      isOnboardingComplete: (userId) => get().onboardingCompleteByUserId[userId] ?? false
-    }),
-    {
-      name: "soccershare-auth",
-      partialize: (state) => ({
-        selectedRole: state.selectedRole,
-        selectedUserId: state.selectedUserId,
-        authEmail: state.authEmail,
-        accounts: state.accounts,
-        onboardingCompleteByUserId: state.onboardingCompleteByUserId
-      })
-    }
-  )
-);
+    clearError: () => set({ error: undefined })
+  };
+});

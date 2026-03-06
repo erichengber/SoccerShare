@@ -8,12 +8,10 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allow }: ProtectedRouteProps) {
-  const { selectedRole, selectedUserId, isOnboardingComplete } = useAuthStore();
-  const location = useLocation();
-  const { isInitialized, selectedRole, selectedUserId } = useAuthStore();
+  const { user, selectedRole, selectedUserId } = useAuthStore();
 
-  if (!isInitialized) {
-    return null;
+  if (!user) {
+    return <Navigate replace to="/" />;
   }
 
   if (!selectedRole || !selectedUserId) {

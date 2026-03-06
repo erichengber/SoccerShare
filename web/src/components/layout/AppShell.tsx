@@ -32,13 +32,8 @@ const navByRole: Record<UserRole, { label: string; path: string }[]> = {
 };
 
 export function AppShell() {
-  const { selectedRole, selectedUserId, clearSession } = useAuthStore();
-  const { data, syncCoachTeamFromSupabase } = useDataStore();
-
-  useEffect(() => {
-    if (!selectedUserId || selectedRole !== "coach") return;
-    void syncCoachTeamFromSupabase(selectedUserId);
-  }, [selectedRole, selectedUserId, syncCoachTeamFromSupabase]);
+  const { selectedRole, selectedUserId, signOut } = useAuthStore();
+  const { data } = useDataStore();
 
   if (!selectedRole || !selectedUserId) return null;
 
@@ -59,9 +54,9 @@ export function AppShell() {
               </p>
               <p className="text-muted-foreground capitalize">{selectedRole}</p>
             </div>
-            <Button onClick={() => void clearSession()} size="sm" variant="outline">
+            <Button onClick={() => void signOut()} size="sm" variant="outline">
               <LogOut className="h-4 w-4" />
-              Log Out
+              Sign Out
             </Button>
           </div>
         </div>

@@ -10,7 +10,8 @@ Role-based React + TypeScript frontend MVP inspired by Hudl for middle/high scho
 - shadcn/ui-style component primitives
 - React Router
 - Zustand (with persisted recruiter and auth state)
-- Mock in-memory data only (no backend)
+- Supabase Auth (email/password)
+- Mock in-memory domain data for MVP content
 
 ## Run
 
@@ -19,9 +20,20 @@ npm install
 npm run dev
 ```
 
+## Environment
+
+Create `web/.env.local` with:
+
+```bash
+VITE_SUPABASE_URL=your_project_url
+VITE_SUPABASE_ANON_KEY=your_anon_or_publishable_key
+```
+
+`VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` is also supported as a fallback key name.
+
 ## Routes
 
-- Public: `/`, `/login`, `/register`, `/select-role`
+- Public: `/` (auth entry), `/select-role` (post-auth role mapping)
 - Player: `/player`, `/player/profile`, `/player/clips`, `/player/clips/:clipId`, `/player/schedule`, `/player/settings/privacy`
 - Parent: `/parent`, `/parent/players`, `/parent/players/:playerId`
 - Coach: `/coach`, `/coach/roster`, `/coach/players/:playerId`, `/coach/schedule`
@@ -37,18 +49,11 @@ npm run dev
 - `src/routes`: Route map + protection
 - `src/lib`: selectors, formatting, role routing
 
-## Supabase Integration Points
+## Supabase Integration
 
-- `src/lib/authClient.ts`
-  - `loginWithPassword`
-  - `registerWithPassword`
-  - Contains handoff notes for replacing mock auth with Supabase Auth + profiles table linkage.
-- `src/store/dataStore.ts`
-  - `uploadClip`
-  - `updateClip`
-  - `setPlayerPrivacy`
-
-These methods are already isolated and commented as handoff points for replacing in-memory mutations with Supabase calls.
+- Auth/session is fully handled through `src/store/authStore.ts` and `src/lib/supabaseClient.ts`.
+- Role + demo-user mapping is persisted in Supabase user metadata (`selected_role`, `selected_user_id`).
+- Data store mutations remain in-memory for MVP data and are still marked with Supabase handoff comments in `src/store/dataStore.ts`.
 
 ## Privacy Rules
 
