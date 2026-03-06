@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";

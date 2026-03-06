@@ -10,7 +10,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const { signInWithEmail } = useAuthStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,18 +23,14 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await login(email, password);
-      if (!result.success || !result.role) {
-        setError(result.error ?? "Unable to sign in.");
+      const maybeError = await signInWithEmail(email.trim(), password);
+      if (maybeError) {
+        setError(maybeError);
         return;
       }
 
-    if (result.onboardingRequired) {
-      navigate("/onboarding/player");
-      return;
-    }
-
-    navigate(getHomePathForRole(result.role));
+      const { selectedRole } = useAuthStore.getState();
+      navigate(selectedRole ? getHomePathForRole(selectedRole) : "/select-role");
     } finally {
       setIsSubmitting(false);
     }
@@ -47,7 +43,7 @@ export function LoginPage() {
           <CardHeader>
             <CardTitle>Login</CardTitle>
             <CardDescription>
-              Sign in to your SoccerShare account. Demo accounts use password <strong>demo1234</strong>.
+              Sign in to your SoccerShare account using your Supabase email and password.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -89,10 +85,6 @@ export function LoginPage() {
 
             <p className="mt-4 text-sm text-muted-foreground">
               No account yet? <Link className="text-primary underline" to="/register">Create one</Link>
-            </p>
-
-            <p className="mt-2 text-sm text-muted-foreground">
-              Need instant demo access? <Link className="text-primary underline" to="/select-role">Use role selector</Link>
             </p>
           </CardContent>
         </Card>

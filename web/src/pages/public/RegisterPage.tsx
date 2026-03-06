@@ -8,14 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { USER_ROLES } from "@/constants/domain";
 import { capitalize } from "@/lib/format";
-import { getHomePathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuthStore();
+  const { signUpWithEmail } = useAuthStore();
   const { data } = useDataStore();
 
   const [firstName, setFirstName] = useState("");
@@ -67,17 +66,21 @@ export function RegisterPage() {
         return;
       }
 
-      const result = await register({
-        firstName,
-        lastName,
-        email: normalizedEmail,
-        password,
-        role,
-        userId: linkedUserId
+      const maybeError = await signUpWithEmail(normalizedEmail, password, {
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        selected_role: role,
+        selected_user_id: linkedUserId
       });
 
-      if (!result.success) {
-        setError(result.error ?? "Unable to register account.");
+      if (maybeError) {
+        setError(maybeError);
+        return;
+      }
+
+      const { selectedRole, user } = useAuthStore.getState();
+      if (user && selectedRole) {
+        navigate(`/`);
         return;
       }
 
@@ -85,32 +88,6 @@ export function RegisterPage() {
     } finally {
       setIsSubmitting(false);
     }
-
-    const result = register({
-      firstName,
-      lastName,
-      email,
-      password,
-      role,
-      userId: linkedUserId
-    });
-
-    if (!result.success) {
-      setError(result.error ?? "Unable to register account.");
-      return;
-    }
-
-    if (result.onboardingRequired) {
-      navigate("/onboarding/player");
-      return;
-    }
-
-    if (result.role) {
-      navigate(getHomePathForRole(result.role));
-      return;
-    }
-
-    navigate("/login");
   }
 
   return (
@@ -120,7 +97,7 @@ export function RegisterPage() {
           <CardHeader>
             <CardTitle>Create Account</CardTitle>
             <CardDescription>
-              This registers a local mock account now, with clear handoff points to replace with Supabase Auth later.
+              Register with Supabase, then continue with the linked demo profile for your role.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -14,7 +14,7 @@ import type { PlayerPosition } from "@/types/domain";
 
 export function PlayerOnboardingPage() {
   const navigate = useNavigate();
-  const { selectedUserId, markOnboardingComplete } = useAuthStore();
+  const { selectedUserId } = useAuthStore();
   const { data, completePlayerOnboarding } = useDataStore();
   const player = data.players.find((entry) => entry.id === selectedUserId);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -89,8 +89,6 @@ export function PlayerOnboardingPage() {
       setError(result.error ?? "Unable to save onboarding details.");
       return;
     }
-
-    markOnboardingComplete(playerId);
     navigate("/player");
   }
 

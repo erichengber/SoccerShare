@@ -1,13 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import {
-  buildDefaultAccounts,
-  loginWithPassword,
-  registerWithPassword,
-  type AuthAccount,
-  type RegisterAccountInput
-} from "@/lib/authClient";
-import { fetchProfile, isSupabaseConfigured, supabaseAuth } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import type { UserRole } from "@/types/domain";
@@ -19,78 +10,6 @@ type AuthMetadata = {
 
 interface AuthState {
   isInitialized: boolean;
-  selectedRole?: UserRole;
-  selectedUserId?: string;
-  authEmail?: string;
-  accounts: Record<string, AuthAccount>;
-  initialize: () => Promise<void>;
-  selectRole: (role: UserRole, userId: string) => void;
-  clearSession: () => void;
-  login: (email: string, password: string) => AuthActionResult;
-  register: (input: RegisterAccountInput) => AuthActionResult;
-}
-
-const defaultAccounts = buildDefaultAccounts();
-
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      isInitialized: false,
-      selectedRole: undefined,
-      selectedUserId: undefined,
-      authEmail: undefined,
-      accounts: defaultAccounts,
-      initialize: async () => {
-        if (!isSupabaseConfigured) {
-          set({ isInitialized: true });
-          return;
-        }
-
-        try {
-          const sessionResult = await supabaseAuth.getSession();
-          const user = sessionResult.data.session?.user;
-          if (!user) {
-            set({
-              isInitialized: true,
-              selectedRole: undefined,
-              selectedUserId: undefined,
-              authEmail: undefined
-            });
-            return;
-          }
-
-          const profile = await fetchProfile(user.id);
-          set({
-            isInitialized: true,
-            selectedRole: profile?.role,
-            selectedUserId: profile?.linked_user_id,
-            authEmail: user.email ?? undefined
-          });
-        } catch {
-          set({ isInitialized: true });
-        }
-      },
-      selectRole: (role, userId) => set({ selectedRole: role, selectedUserId: userId }),
-      clearSession: () => {
-        if (isSupabaseConfigured) {
-          void supabaseAuth.signOut();
-        }
-
-        set({
-          selectedRole: undefined,
-          selectedUserId: undefined,
-          authEmail: undefined
-        });
-      },
-      login: (email, password) => {
-        const result = loginWithPassword(get().accounts, email, password);
-
-        if (!result.success || !result.account) {
-          return {
-            success: false,
-            error: result.error ?? "Login failed."
-          };
-        }
   isLoading: boolean;
   user: User | null;
   session: Session | null;
@@ -99,7 +18,11 @@ export const useAuthStore = create<AuthState>()(
   error?: string;
   initialize: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<string | undefined>;
-  signUpWithEmail: (email: string, password: string) => Promise<string | undefined>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    metadata?: Record<string, unknown>
+  ) => Promise<string | undefined>;
   selectRole: (role: UserRole, userId: string) => Promise<string | undefined>;
   signOut: () => Promise<void>;
   clearError: () => void;
@@ -152,8 +75,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
       if (!hasListener) {
         hasListener = true;
-        supabase.auth.onAuthStateChange((_event, session) => {
-          applySession(session);
+        supabase.auth.onAuthStateChange((_event, nextSession) => {
+          applySession(nextSession);
         });
       }
 
@@ -162,14 +85,24 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     signInWithEmail: async (email, password) => {
       set({ isLoading: true, error: undefined });
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (data.session) {
+        applySession(data.session);
+      }
       set({ isLoading: false, error: error?.message });
       return error?.message;
     },
 
-    signUpWithEmail: async (email, password) => {
+    signUpWithEmail: async (email, password, metadata) => {
       set({ isLoading: true, error: undefined });
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: metadata ? { data: metadata } : undefined
+      });
+      if (data.session) {
+        applySession(data.session);
+      }
       set({ isLoading: false, error: error?.message });
       return error?.message;
     },
@@ -183,15 +116,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
 
       set({ isLoading: true, error: undefined });
-      const metadata: AuthMetadata = {
-        selected_role: role,
-        selected_user_id: userId
-      };
-
       const { data, error } = await supabase.auth.updateUser({
         data: {
           ...(user.user_metadata ?? {}),
-          ...metadata
+          selected_role: role,
+          selected_user_id: userId
         }
       });
 
