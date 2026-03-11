@@ -1,0 +1,24 @@
+SoccerShare
+Eric Hengber
+Week 9 Individual Report
+
+Time Dedicated to the Project:
+The total hours or days you allocated for different phases (planning, research, implementation, testing)
+3 hours dedicated this week for planning
+How you managed your schedule to ensure progress
+Stayed organized and prioritized work to ensure everything got done
+The consistency and commitment shown in working on the project
+Provided updates in our group chat on completed work and what else needed to be done
+Made sure all tasks were completed by due date including reports and project proposal
+
+Contribution to the Project Development Process:
+Fixed various bugs introduced throughout development
+Set up meeting with a soccer coach and demoed our application so far to receive feedback and suggestions
+Worked on Presentation 2
+
+Demonstration of Applied Knowledge:
+This week I applied my knowledge by identifying and fixing several bugs that appeared throughout the development process. Debugging required reviewing application behavior, tracing errors in the code, and verifying that fixes did not introduce new issues. I also demoed our application to a soccer coach to gather real user feedback which helped validate some of our design decisions and provided insight into how actual players and coaches might use the platform. 
+
+Reflection and Lessons Learned:
+This week highlighted the importance of user feedback and iterative improvement during development. Demoing the application to a soccer coach provided valuable perspective on how the product is perceived outside of the development team and revealed opportunities to improve usability and features. Fixing bugs also reinforced the importance of thorough testing and careful code review throughout development. 
+
