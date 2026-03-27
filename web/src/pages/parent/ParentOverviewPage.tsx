@@ -83,8 +83,8 @@ export function ParentOverviewPage() {
                   <p className="text-xs text-muted-foreground">{getTeamName(data, invite.teamId)}</p>
                   <div className="mt-3 flex gap-2">
                     <Button
-                      onClick={() => {
-                        const result = respondToTeamInvite({
+                      onClick={async () => {
+                        const result = await respondToTeamInvite({
                           inviteId: invite.id,
                           responderRole: "parent",
                           responderId: parent.id,
@@ -97,8 +97,8 @@ export function ParentOverviewPage() {
                       Accept
                     </Button>
                     <Button
-                      onClick={() => {
-                        const result = respondToTeamInvite({
+                      onClick={async () => {
+                        const result = await respondToTeamInvite({
                           inviteId: invite.id,
                           responderRole: "parent",
                           responderId: parent.id,
