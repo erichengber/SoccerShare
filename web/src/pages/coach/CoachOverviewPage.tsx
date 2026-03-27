@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { TeamCard } from "@/components/cards/TeamCard";
 import { ClipCard } from "@/components/cards/ClipCard";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -30,7 +31,11 @@ export function CoachOverviewPage() {
   }
   const coachId = coach.id;
 
-  const team = coach.teamId ? data.teams.find((entry) => entry.id === coach.teamId) : undefined;
+  if (!coach.teamId) {
+    return <Navigate replace to="/onboarding/coach" />;
+  }
+
+  const team = data.teams.find((entry) => entry.id === coach.teamId);
   const roster = team ? data.players.filter((player) => player.teamIds.includes(team.id)) : [];
   const recentClips = team
     ? data.clips.filter((clip) => roster.some((player) => player.id === clip.playerId)).slice(0, 6)

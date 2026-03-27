@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getHomePathForRole } from "@/lib/roleRouting";
+import { getDefaultPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
+import { useDataStore } from "@/store/dataStore";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { signInWithEmail } = useAuthStore();
+  const { data } = useDataStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,8 +31,8 @@ export function LoginPage() {
         return;
       }
 
-      const { selectedRole } = useAuthStore.getState();
-      navigate(selectedRole ? getHomePathForRole(selectedRole) : "/select-role");
+      const { selectedRole, selectedUserId } = useAuthStore.getState();
+      navigate(selectedRole ? getDefaultPathForRole(selectedRole, selectedUserId, data) : "/select-role");
     } finally {
       setIsSubmitting(false);
     }

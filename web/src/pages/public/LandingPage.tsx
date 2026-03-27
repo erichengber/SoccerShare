@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getHomePathForRole } from "@/lib/roleRouting";
+import { getDefaultPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
+import { useDataStore } from "@/store/dataStore";
 
 export function LandingPage() {
-  const { user, selectedRole, isLoading, signInWithEmail, signUpWithEmail } = useAuthStore();
+  const { user, selectedRole, selectedUserId, isLoading, signInWithEmail, signUpWithEmail } = useAuthStore();
+  const { data } = useDataStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState<string | undefined>();
@@ -17,7 +19,7 @@ export function LandingPage() {
   const canSubmit = useMemo(() => email.length > 3 && password.length >= 6 && !isLoading, [email, password, isLoading]);
 
   if (user && selectedRole) {
-    return <Navigate replace to={getHomePathForRole(selectedRole)} />;
+    return <Navigate replace to={getDefaultPathForRole(selectedRole, selectedUserId, data)} />;
   }
 
   if (user && !selectedRole) {

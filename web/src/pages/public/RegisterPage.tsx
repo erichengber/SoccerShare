@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { USER_ROLES } from "@/constants/domain";
+import { defaultUserByRole } from "@/data/mockData";
 import { capitalize } from "@/lib/format";
+import { getDefaultPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
@@ -23,7 +25,7 @@ export function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<UserRole>("player");
-  const [linkedUserId, setLinkedUserId] = useState<string>(data.players[0]?.id ?? "");
+  const [linkedUserId, setLinkedUserId] = useState<string>(defaultUserByRole.player);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,7 +42,11 @@ export function RegisterPage() {
   function handleRoleChange(nextRole: UserRole) {
     setRole(nextRole);
     const nextUsers = usersByRole[nextRole];
-    setLinkedUserId(nextUsers[0]?.id ?? "");
+    const defaultLinkedUserId = defaultUserByRole[nextRole];
+    const fallbackLinkedUserId = nextUsers[0]?.id ?? "";
+    setLinkedUserId(
+      nextUsers.some((user) => user.id === defaultLinkedUserId) ? defaultLinkedUserId : fallbackLinkedUserId
+    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -80,7 +86,7 @@ export function RegisterPage() {
 
       const { selectedRole, user } = useAuthStore.getState();
       if (user && selectedRole) {
-        navigate(`/`);
+        navigate(getDefaultPathForRole(selectedRole, linkedUserId, data));
         return;
       }
 

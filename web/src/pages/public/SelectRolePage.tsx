@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { USER_ROLES } from "@/constants/domain";
 import { defaultUserByRole } from "@/data/mockData";
-import { getHomePathForRole } from "@/lib/roleRouting";
+import { getDefaultPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
@@ -50,7 +50,7 @@ export function SelectRolePage() {
   async function handleContinue() {
     const maybeError = await selectRole(role, selectedUserId);
     if (maybeError) return;
-    navigate(getHomePathForRole(role));
+    navigate(getDefaultPathForRole(role, selectedUserId, data));
   }
 
   return (
