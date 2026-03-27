@@ -3,6 +3,11 @@ import { mockData } from "@/data/mockData";
 import { fetchClipsFromSupabase, upsertClipInSupabase } from "@/lib/clipClient";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { createCoachTeamInSupabase, fetchCoachTeamFromSupabase } from "@/lib/teamClient";
+import {
+  createTeamInviteInSupabase,
+  fetchTeamInvitesFromSupabase,
+  respondToTeamInviteInSupabase
+} from "@/lib/teamInviteClient";
 import { uploadClipMedia } from "@/lib/mediaClient";
 import type {
   AppData,
@@ -33,11 +38,15 @@ interface DataState {
   clipsInitialized: boolean;
   clipsLoading: boolean;
   clipsSyncError?: string;
+  teamInvitesInitialized: boolean;
+  teamInvitesLoading: boolean;
+  teamInvitesSyncError?: string;
   loadClips: () => Promise<void>;
+  loadTeamInvites: () => Promise<void>;
   createCoachTeam: (coachId: string, input: CreateCoachTeamInput) => AsyncActionResult;
   syncCoachTeamFromSupabase: (coachId: string) => AsyncActionResult;
-  invitePlayerToTeam: (coachId: string, playerId: string) => ActionResult;
-  respondToTeamInvite: (input: TeamInviteResponseInput) => ActionResult;
+  invitePlayerToTeam: (coachId: string, playerId: string) => AsyncActionResult;
+  respondToTeamInvite: (input: TeamInviteResponseInput) => AsyncActionResult;
   addCoachGame: (coachId: string, input: CoachGameInput) => ActionResult;
   addCoachTournament: (coachId: string, input: CoachTournamentInput) => ActionResult;
   uploadClip: (input: ClipUploadInput) => AsyncActionResult;
@@ -135,11 +144,29 @@ function mergeClips(localClips: Clip[], remoteClips: Clip[]) {
   );
 }
 
+function mergeTeamInvites(localInvites: TeamInvite[], remoteInvites: TeamInvite[]) {
+  const invitesById = new Map<string, TeamInvite>();
+
+  localInvites.forEach((invite) => {
+    invitesById.set(invite.id, invite);
+  });
+  remoteInvites.forEach((invite) => {
+    invitesById.set(invite.id, invite);
+  });
+
+  return Array.from(invitesById.values()).sort(
+    (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt)
+  );
+}
+
 export const useDataStore = create<DataState>((set, get) => ({
   data: mockData,
   clipsInitialized: false,
   clipsLoading: false,
   clipsSyncError: undefined,
+  teamInvitesInitialized: false,
+  teamInvitesLoading: false,
+  teamInvitesSyncError: undefined,
   loadClips: async () => {
     const { clipsInitialized, clipsLoading } = get();
     if (clipsInitialized || clipsLoading) {
@@ -167,6 +194,36 @@ export const useDataStore = create<DataState>((set, get) => ({
       data: {
         ...state.data,
         clips: mergeClips(state.data.clips, result.data ?? [])
+      }
+    }));
+  },
+  loadTeamInvites: async () => {
+    const { teamInvitesInitialized, teamInvitesLoading } = get();
+    if (teamInvitesInitialized || teamInvitesLoading) {
+      return;
+    }
+
+    set({
+      teamInvitesLoading: true
+    });
+
+    const result = await fetchTeamInvitesFromSupabase();
+    if (!result.data) {
+      set({
+        teamInvitesInitialized: true,
+        teamInvitesLoading: false,
+        teamInvitesSyncError: result.error ?? "Unable to sync team invites from Supabase."
+      });
+      return;
+    }
+
+    set((state) => ({
+      teamInvitesInitialized: true,
+      teamInvitesLoading: false,
+      teamInvitesSyncError: undefined,
+      data: {
+        ...state.data,
+        teamInvites: mergeTeamInvites(state.data.teamInvites, result.data ?? [])
       }
     }));
   },
@@ -270,7 +327,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     return { success: true };
   },
-  invitePlayerToTeam: (coachId, playerId) => {
+  invitePlayerToTeam: async (coachId, playerId) => {
     const { data } = get();
     const coach = data.coaches.find((entry) => entry.id === coachId);
     if (!coach) {
@@ -299,25 +356,38 @@ export const useDataStore = create<DataState>((set, get) => ({
       return { success: false, error: "An invite is already pending for this player." };
     }
 
-    const invite: TeamInvite = {
-      id: `invite-${Date.now()}`,
+    const inviteId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `invite-${Date.now()}`;
+    const createdAt = new Date().toISOString();
+
+    const createResult = await createTeamInviteInSupabase({
+      id: inviteId,
       teamId: coach.teamId,
       playerId,
       invitedByCoachId: coachId,
       status: "pending",
-      createdAt: new Date().toISOString()
-    };
+      createdAt
+    });
+
+    if (!createResult.data) {
+      return {
+        success: false,
+        error: createResult.error ?? "Unable to send invite."
+      };
+    }
 
     set((state) => ({
       data: {
         ...state.data,
-        teamInvites: [invite, ...state.data.teamInvites]
+        teamInvites: mergeTeamInvites(state.data.teamInvites, [createResult.data as TeamInvite])
       }
     }));
 
     return { success: true };
   },
-  respondToTeamInvite: ({ inviteId, responderRole, responderId, accept }) => {
+  respondToTeamInvite: async ({ inviteId, responderRole, responderId, accept }) => {
     const { data } = get();
     const invite = data.teamInvites.find((entry) => entry.id === inviteId);
     if (!invite) {
@@ -345,17 +415,38 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
 
     const nextStatus: TeamInvite["status"] = accept ? "accepted" : "declined";
+    const respondedAt = new Date().toISOString();
+
+    let persistedInvite = invite;
+    if (isSupabaseConfigured) {
+      const responseResult = await respondToTeamInviteInSupabase({
+        inviteId,
+        status: nextStatus,
+        respondedAt,
+        respondedByRole: responderRole
+      });
+
+      if (!responseResult.data) {
+        return {
+          success: false,
+          error: responseResult.error ?? "Unable to respond to invite."
+        };
+      }
+
+      persistedInvite = responseResult.data;
+    } else {
+      persistedInvite = {
+        ...invite,
+        status: nextStatus,
+        respondedAt,
+        respondedByRole: responderRole
+      };
+    }
 
     set((state) => {
-      const teamInvites = state.data.teamInvites.map((entry) =>
-        entry.id === inviteId
-          ? {
-              ...entry,
-              status: nextStatus,
-              respondedAt: new Date().toISOString(),
-              respondedByRole: responderRole
-            }
-          : entry
+      const teamInvites = mergeTeamInvites(
+        state.data.teamInvites.filter((entry) => entry.id !== inviteId),
+        [persistedInvite]
       );
 
       if (!accept) {
