@@ -40,6 +40,21 @@ function parseUserIdFromMetadata(user: User | null): string | undefined {
   return typeof userId === "string" && userId.length > 0 ? userId : undefined;
 }
 
+function parseMetadataOverride(
+  metadata?: Record<string, unknown>
+): { selectedRole?: UserRole; selectedUserId?: string } {
+  const selectedRole = metadata?.selected_role;
+  const selectedUserId = metadata?.selected_user_id;
+
+  return {
+    selectedRole:
+      selectedRole === "player" || selectedRole === "parent" || selectedRole === "coach" || selectedRole === "recruiter"
+        ? selectedRole
+        : undefined,
+    selectedUserId: typeof selectedUserId === "string" && selectedUserId.length > 0 ? selectedUserId : undefined
+  };
+}
+
 export const useAuthStore = create<AuthState>((set, get) => {
   let hasListener = false;
 
@@ -100,8 +115,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
         password,
         options: metadata ? { data: metadata } : undefined
       });
+      const metadataOverride = parseMetadataOverride(metadata);
       if (data.session) {
         applySession(data.session);
+        set((state) => ({
+          selectedRole: state.selectedRole ?? metadataOverride.selectedRole,
+          selectedUserId: state.selectedUserId ?? metadataOverride.selectedUserId
+        }));
       }
       set({ isLoading: false, error: error?.message });
       return error?.message;

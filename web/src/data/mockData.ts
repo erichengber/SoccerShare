@@ -297,6 +297,14 @@ const coaches: Coach[] = [
     email: "james.nguyen@example.com",
     avatarUrl: "https://i.pravatar.cc/300?img=30",
     teamId: "team-2"
+  },
+  {
+    id: "coach-5",
+    role: "coach",
+    firstName: "Marisol",
+    lastName: "Vega",
+    email: "marisol.vega@example.com",
+    avatarUrl: "https://i.pravatar.cc/300?img=31"
   }
 ];
 
@@ -699,6 +707,6 @@ export const mockData: AppData = {
 export const defaultUserByRole: Record<UserRole, string> = {
   player: "player-1",
   parent: "parent-4",
-  coach: "coach-4",
+  coach: "coach-5",
   recruiter: "recruiter-1"
 };

@@ -14,6 +14,7 @@ import type {
   Clip,
   ClipUploadInput,
   ClipUpdateInput,
+  CoachOnboardingInput,
   Coach,
   CoachGameInput,
   CoachTournamentInput,
@@ -53,6 +54,7 @@ interface DataState {
   updateClip: (input: ClipUpdateInput) => AsyncActionResult;
   setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => void;
   completePlayerOnboarding: (input: PlayerOnboardingInput) => ActionResult;
+  completeCoachOnboarding: (input: CoachOnboardingInput) => AsyncActionResult;
 }
 
 function addTeamToPlayer(player: Player, teamId: string): Player {
@@ -248,7 +250,11 @@ export const useDataStore = create<DataState>((set, get) => ({
       coachId,
       name: teamName,
       level: input.level,
-      schoolId
+      schoolId,
+      firstName: input.firstName?.trim() || coach.firstName,
+      lastName: input.lastName?.trim() || coach.lastName,
+      email: input.email?.trim() || coach.email,
+      avatarUrl: input.avatarUrl?.trim() || coach.avatarUrl
     });
 
     if (!createResult.data?.team) {
@@ -800,6 +806,60 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
       };
     });
+
+    return { success: true };
+  },
+  completeCoachOnboarding: async (input) => {
+    const { data, createCoachTeam } = get();
+    const coach = data.coaches.find((entry) => entry.id === input.coachId);
+    if (!coach) {
+      return { success: false, error: "Coach not found." };
+    }
+
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    if (input.schoolId && !data.schools.some((school) => school.id === input.schoolId)) {
+      return { success: false, error: "Selected school is invalid." };
+    }
+
+    const createResult = await createCoachTeam(input.coachId, {
+      name: input.teamName,
+      level: input.level,
+      schoolId: input.schoolId,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      email: input.email,
+      avatarUrl
+    });
+
+    if (!createResult.success) {
+      return createResult;
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        coaches: state.data.coaches.map((entry) =>
+          entry.id === input.coachId
+            ? {
+                ...entry,
+                avatarUrl
+              }
+            : entry
+        ),
+        users: state.data.users.map((entry) =>
+          entry.id === input.coachId && entry.role === "coach"
+            ? {
+                ...entry,
+                avatarUrl
+              }
+            : entry
+        )
+      }
+    }));
 
     return { success: true };
   }

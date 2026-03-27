@@ -26,6 +26,10 @@ interface CreateCoachTeamPayload {
   name: string;
   level: TeamLevel;
   schoolId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string;
 }
 
 interface CoachTeamSnapshot {
@@ -64,6 +68,16 @@ export async function createCoachTeamInSupabase(
   const teamId = buildTeamId();
   const trimmedName = payload.name.trim();
   const schoolId = payload.schoolId?.trim() || null;
+  const firstName = payload.firstName.trim();
+  const lastName = payload.lastName.trim();
+  const email = payload.email.trim().toLowerCase();
+  const avatarUrl = payload.avatarUrl.trim();
+
+  if (!firstName || !lastName || !email || !avatarUrl) {
+    return {
+      error: "Coach profile is missing required fields."
+    };
+  }
 
   const { data: createdTeamRow, error: createTeamError } = await supabase
     .from("teams")
@@ -88,6 +102,11 @@ export async function createCoachTeamInSupabase(
   const { data: updatedCoachRows, error: updateCoachError } = await supabase
     .from("coaches")
     .update({
+      role: "coach",
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      avatar_url: avatarUrl,
       team_id: normalizedCreatedTeamRow.id,
       school_id: schoolId
     })
@@ -103,6 +122,11 @@ export async function createCoachTeamInSupabase(
   if (!updatedCoachRows?.length) {
     const { error: insertCoachError } = await supabase.from("coaches").insert({
       id: payload.coachId,
+      role: "coach",
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      avatar_url: avatarUrl,
       team_id: normalizedCreatedTeamRow.id,
       school_id: schoolId
     });

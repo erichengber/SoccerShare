@@ -194,6 +194,10 @@ export interface CreateCoachTeamInput {
   name: string;
   level: TeamLevel;
   schoolId?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  avatarUrl?: string;
 }
 
 export interface PlayerOnboardingInput {
@@ -203,6 +207,17 @@ export interface PlayerOnboardingInput {
   teamId: string;
   bio: string;
   avatarUrl: string;
+}
+
+export interface CoachOnboardingInput {
+  coachId: string;
+  avatarUrl: string;
+  teamName: string;
+  level: TeamLevel;
+  schoolId?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 }
 
 export interface CoachTournamentInput {

@@ -6,6 +6,7 @@ import { LoginPage } from "@/pages/public/LoginPage";
 import { RegisterPage } from "@/pages/public/RegisterPage";
 import { SelectRolePage } from "@/pages/public/SelectRolePage";
 import { PlayerOnboardingPage } from "@/pages/public/PlayerOnboardingPage";
+import { CoachOnboardingPage } from "@/pages/public/CoachOnboardingPage";
 import { PlayerOverviewPage } from "@/pages/player/PlayerOverviewPage";
 import { PlayerProfilePage } from "@/pages/player/PlayerProfilePage";
 import { PlayerClipsPage } from "@/pages/player/PlayerClipsPage";
@@ -36,6 +37,10 @@ export function AppRoutes() {
 
       <Route element={<ProtectedRoute allow={["player"]} />}>
         <Route element={<PlayerOnboardingPage />} path="onboarding/player" />
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["coach"]} />}>
+        <Route element={<CoachOnboardingPage />} path="onboarding/coach" />
       </Route>
 
       <Route element={<ProtectedRoute allow={["player"]} />}>
