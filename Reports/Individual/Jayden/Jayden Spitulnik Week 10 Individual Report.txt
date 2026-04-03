@@ -1,0 +1,11 @@
+Time Dedicated to the Project
+- This week I committed 4 hours to the project. I focused on persisting the coach-to-player team invite workflow in Supabase so invites survive refreshes and can be accepted or declined reliably.
+
+Contribution to the Project Development Process
+- I contributed by implementing a dedicated Supabase-backed team invite client, wiring invite loading into app startup, and updating coach, player, and parent flows so invite creation and responses persist through the backend instead of only living in local Zustand state. I also added the SQL setup needed for the new `team_invites` table and documented the new setup step for the team.
+
+Demonstration of Applied Knowledge
+- I demonstrated my knowledge by extending our TypeScript data layer with async invite actions, preserving the existing mock fallback when Supabase is not configured, and keeping roster membership updates consistent when an invite is accepted. I also designed the table constraints to prevent duplicate pending invites for the same player-team pair while still preserving invite history after an acceptance or decline.
+
+Reflection and Lessons Learned
+- This week reinforced that workflow persistence requires more than just saving records. I learned that the surrounding load path, uniqueness constraints, and response handling all need to be designed together so role-based features remain consistent after reloads and across different users interacting with the same data.

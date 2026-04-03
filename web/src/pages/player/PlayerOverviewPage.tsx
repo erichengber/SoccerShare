@@ -91,8 +91,8 @@ export function PlayerOverviewPage() {
                   </p>
                   <div className="mt-3 flex gap-2">
                     <Button
-                      onClick={() => {
-                        const result = respondToTeamInvite({
+                      onClick={async () => {
+                        const result = await respondToTeamInvite({
                           inviteId: invite.id,
                           responderRole: "player",
                           responderId: player.id,
@@ -105,8 +105,8 @@ export function PlayerOverviewPage() {
                       Accept
                     </Button>
                     <Button
-                      onClick={() => {
-                        const result = respondToTeamInvite({
+                      onClick={async () => {
+                        const result = await respondToTeamInvite({
                           inviteId: invite.id,
                           responderRole: "player",
                           responderId: player.id,

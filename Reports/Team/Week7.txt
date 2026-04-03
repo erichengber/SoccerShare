@@ -1,0 +1,129 @@
+Project status Report
+Project Summary
+Report date
+Team Name:
+Prepared for:
+2/27/2026
+SoccerShare
+Week 7
+
+Status Summary/Completed Activities
+Completed Sprint 3
+Added tournament creation functionality on Coaches view
+Added team creation functionality on Coaches view
+Added Authentication to Supabase
+Task
+% Done
+Due date
+Person Responsible
+Notes
+Finished Sprint 2
+100%
+2/27/26
+All
+
+
+Added tournament creation functionality on Coaches view
+100%
+2/27/26
+Eric
+
+
+Added team creation functionality on Coaches view
+100%
+2/27/26
+Jayden
+
+
+Added Authentication
+100%
+2/27/26
+Max
+
+
+
+
+
+
+
+
+
+
+
+
+
+Activities Planned for Next Week 
+Task
+Person Responsible
+
+
+
+
+Notes
+Start Sprint 4
+All
+
+
+
+
+
+
+Link Supabase backend
+Max
+
+
+
+
+
+
+Set up video upload pipeline and storage in Supabase
+Jayden
+
+
+
+
+
+
+Set up authentication pipeline in Supabase
+Eric
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Risk and issue history
+Issue
+Mitigation Plan
+
+
+N/A
+N/A
+
+
+
+Did your team meet with your faculty advisor this week? Yes/No. 
+NExt Scheduled Meeting with your advisor_3/13__
+*At the end of each week email form to advisor and turn in on Canvas.
+
+
+
+
+Github Insights
+
+
+
+
+AI Prompts
+None this week

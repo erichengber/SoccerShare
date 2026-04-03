@@ -84,8 +84,8 @@ export function CoachRosterPage() {
                 </Select>
                 <Button
                   disabled={!selectedInvitePlayerId}
-                  onClick={() => {
-                    const result = invitePlayerToTeam(coach.id, selectedInvitePlayerId);
+                  onClick={async () => {
+                    const result = await invitePlayerToTeam(coach.id, selectedInvitePlayerId);
                     setInviteMessage(result.success ? "Invite sent." : result.error ?? "Unable to send invite.");
                   }}
                 >

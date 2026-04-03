@@ -7,6 +7,8 @@ export default function App() {
   const initializeAuth = useAuthStore((state) => state.initialize);
   const isInitialized = useAuthStore((state) => state.isInitialized);
   const loadClips = useDataStore((state) => state.loadClips);
+  const loadTeamInvites = useDataStore((state) => state.loadTeamInvites);
+  const loadSchedule = useDataStore((state) => state.loadSchedule);
 
   useEffect(() => {
     void initializeAuth();
@@ -15,6 +17,14 @@ export default function App() {
   useEffect(() => {
     void loadClips();
   }, [loadClips]);
+
+  useEffect(() => {
+    void loadTeamInvites();
+  }, [loadTeamInvites]);
+
+  useEffect(() => {
+    void loadSchedule();
+  }, [loadSchedule]);
 
   if (!isInitialized) {
     return (
