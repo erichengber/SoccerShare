@@ -1,0 +1,9 @@
+Time Dedicated to the Project
+This week I spent around 3 hours refactoring user authentication making sure users do not need to use mock users in order to create an account
+Contribution to the Project Development Process
+This week I helped develop to mae sure that users can create an account and fill in their own 
+Demonstration of Applied Knowledge
+Using my knowledge on Supabase, I was able to refactor the account creation screen to include options for users to fill in their own data
+Reflection and Lessons Learned
+After creating and refactor I noticed the importance of creating mock data first, which helps create features down the road.
+
