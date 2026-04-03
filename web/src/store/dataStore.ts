@@ -26,6 +26,7 @@ import type {
   CoachGameInput,
   CoachTournamentInput,
   CreateCoachTeamInput,
+  Game,
   Parent,
   ParentOnboardingInput,
   Player,

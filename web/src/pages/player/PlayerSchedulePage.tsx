@@ -12,7 +12,7 @@ export function PlayerSchedulePage() {
 
   const player = data.players.find((entry) => entry.id === selectedUserId);
   if (!player) {
-    return <EmptyState description="Select a valid player demo user." title="Player not found" />;
+    return <EmptyState description="Player profile not found for this account." title="Player not found" />;
   }
 
   const games = data.games.filter((game) =>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { USER_ROLES } from "@/constants/domain";
-import { defaultUserByRole } from "@/data/mockData";
 import { capitalize } from "@/lib/format";
 import { getDefaultPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
+
+type RoleSelection = UserRole | "unset";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -24,29 +25,17 @@ export function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("player");
-  const [linkedUserId, setLinkedUserId] = useState<string>(defaultUserByRole.player);
+  const [role, setRole] = useState<RoleSelection>("unset");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [stateOrRegion, setStateOrRegion] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [recruiterRegion, setRecruiterRegion] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const usersByRole = useMemo(
-    () => ({
-      player: data.players,
-      parent: data.parents,
-      coach: data.coaches,
-      recruiter: data.recruiters
-    }),
-    [data]
-  );
-
-  function handleRoleChange(nextRole: UserRole) {
+  function handleRoleChange(nextRole: RoleSelection) {
     setRole(nextRole);
-    const nextUsers = usersByRole[nextRole];
-    const defaultLinkedUserId = defaultUserByRole[nextRole];
-    const fallbackLinkedUserId = nextUsers[0]?.id ?? "";
-    setLinkedUserId(
-      nextUsers.some((user) => user.id === defaultLinkedUserId) ? defaultLinkedUserId : fallbackLinkedUserId
-    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -67,30 +56,52 @@ export function RegisterPage() {
         return;
       }
 
-      if (!linkedUserId) {
-        setError("Please select a linked demo profile.");
+      const trimmedFirstName = firstName.trim();
+      const trimmedLastName = lastName.trim();
+      if (!trimmedFirstName || !trimmedLastName) {
+        setError("First and last name are required.");
         return;
       }
 
-      const maybeError = await signUpWithEmail(normalizedEmail, password, {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        selected_role: role,
-        selected_user_id: linkedUserId
-      });
+      const metadata: Record<string, unknown> = {};
+
+      metadata.first_name = trimmedFirstName;
+      metadata.last_name = trimmedLastName;
+      if (role !== "unset") metadata.selected_role = role;
+
+      const trimmedPhone = phone.trim();
+      const trimmedCity = city.trim();
+      const trimmedStateOrRegion = stateOrRegion.trim();
+      const trimmedOrganization = organization.trim();
+      const trimmedRecruiterRegion = recruiterRegion.trim();
+
+      if (trimmedPhone) metadata.phone = trimmedPhone;
+      if (trimmedCity) metadata.city = trimmedCity;
+      if (trimmedStateOrRegion) metadata.state_or_region = trimmedStateOrRegion;
+
+      if (role === "recruiter") {
+        if (trimmedOrganization) metadata.organization = trimmedOrganization;
+        if (trimmedRecruiterRegion) metadata.recruiter_region = trimmedRecruiterRegion;
+      }
+
+      const maybeError = await signUpWithEmail(
+        normalizedEmail,
+        password,
+        Object.keys(metadata).length > 0 ? metadata : undefined
+      );
 
       if (maybeError) {
         setError(maybeError);
         return;
       }
 
-      const { selectedRole, user } = useAuthStore.getState();
+      const { selectedRole, selectedUserId, user } = useAuthStore.getState();
       if (user && selectedRole) {
-        navigate(getDefaultPathForRole(selectedRole, linkedUserId, data));
+        navigate(getDefaultPathForRole(selectedRole, selectedUserId, data));
         return;
       }
 
-      navigate("/login");
+      navigate("/select-role");
     } finally {
       setIsSubmitting(false);
     }
@@ -103,7 +114,7 @@ export function RegisterPage() {
           <CardHeader>
             <CardTitle>Create Account</CardTitle>
             <CardDescription>
-              Register with Supabase, then continue with the linked demo profile for your role.
+              Register with Supabase, then continue as your selected role.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -138,7 +149,7 @@ export function RegisterPage() {
                   disabled={isSubmitting}
                   id="register-email"
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@school.org"
+                  placeholder="you@yourdomain.com"
                   required
                   type="email"
                   value={email}
@@ -179,13 +190,14 @@ export function RegisterPage() {
                   <Label htmlFor="register-role">Role</Label>
                   <Select
                     disabled={isSubmitting}
-                    onValueChange={(value) => handleRoleChange(value as UserRole)}
+                    onValueChange={(value) => handleRoleChange(value as RoleSelection)}
                     value={role}
                   >
                     <SelectTrigger id="register-role">
-                      <SelectValue />
+                      <SelectValue placeholder="Choose later" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="unset">Choose later</SelectItem>
                       {USER_ROLES.map((entry) => (
                         <SelectItem key={entry} value={entry}>
                           {capitalize(entry)}
@@ -194,23 +206,68 @@ export function RegisterPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="optional-phone">Phone (optional)</Label>
+                <Input
+                  id="optional-phone"
+                  disabled={isSubmitting}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder="(555) 123-4567"
+                  value={phone}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="optional-city">City (optional)</Label>
+                  <Input
+                    id="optional-city"
+                    disabled={isSubmitting}
+                    onChange={(event) => setCity(event.target.value)}
+                    placeholder="Austin"
+                    value={city}
+                  />
+                </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="linked-profile">Linked demo profile</Label>
-                  <Select disabled={isSubmitting} onValueChange={setLinkedUserId} value={linkedUserId}>
-                    <SelectTrigger id="linked-profile">
-                      <SelectValue placeholder="Select profile" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {usersByRole[role].map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.firstName} {user.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="optional-state-region">State or region (optional)</Label>
+                  <Input
+                    id="optional-state-region"
+                    disabled={isSubmitting}
+                    onChange={(event) => setStateOrRegion(event.target.value)}
+                    placeholder="TX"
+                    value={stateOrRegion}
+                  />
                 </div>
               </div>
+
+              {role === "recruiter" ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="optional-organization">Organization (optional)</Label>
+                    <Input
+                      id="optional-organization"
+                      disabled={isSubmitting}
+                      onChange={(event) => setOrganization(event.target.value)}
+                      placeholder="Midwest FC"
+                      value={organization}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="optional-recruiter-region">Recruiting region (optional)</Label>
+                    <Input
+                      id="optional-recruiter-region"
+                      disabled={isSubmitting}
+                      onChange={(event) => setRecruiterRegion(event.target.value)}
+                      placeholder="Midwest"
+                      value={recruiterRegion}
+                    />
+                  </div>
+                </div>
+              ) : null}
 
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
 

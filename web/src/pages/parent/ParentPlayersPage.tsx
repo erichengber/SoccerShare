@@ -11,7 +11,7 @@ export function ParentPlayersPage() {
 
   const parent = data.parents.find((entry) => entry.id === selectedUserId);
   if (!parent) {
-    return <EmptyState description="Select a valid parent demo user." title="Parent not found" />;
+    return <EmptyState description="Parent profile not found for this account." title="Parent not found" />;
   }
 
   const players = data.players.filter((player) => parent.playerIds.includes(player.id));

@@ -1,19 +1,10 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import { USER_ROLES } from "@/constants/domain";
-import { defaultUserByRole } from "@/data/mockData";
-import { getDefaultPathForRole } from "@/lib/roleRouting";
+import { getHomePathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
-import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
 
 const roleDescriptions: Record<UserRole, string> = {
@@ -26,40 +17,26 @@ const roleDescriptions: Record<UserRole, string> = {
 export function SelectRolePage() {
   const navigate = useNavigate();
   const { user, isLoading, selectRole } = useAuthStore();
-  const { data } = useDataStore();
 
   const [role, setRole] = useState<UserRole>("player");
-  const [selectedUserByRole, setSelectedUserByRole] = useState<Record<UserRole, string>>(defaultUserByRole);
-
-  const usersByRole = useMemo(
-    () => ({
-      player: data.players,
-      parent: data.parents,
-      coach: data.coaches,
-      recruiter: data.recruiters
-    }),
-    [data]
-  );
-
-  const selectedUserId = selectedUserByRole[role];
 
   if (!user) {
     return <Navigate replace to="/" />;
   }
 
   async function handleContinue() {
-    const maybeError = await selectRole(role, selectedUserId);
+    const maybeError = await selectRole(role);
     if (maybeError) return;
-    navigate(getDefaultPathForRole(role, selectedUserId, data));
+    navigate(getHomePathForRole(role));
   }
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-10 md:px-6">
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <div>
-          <h1 className="text-3xl font-semibold">Select Demo Role</h1>
+          <h1 className="text-3xl font-semibold">Select Your Role</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Choose one role and matching demo user mapping for your authenticated session.
+            Choose one role for your authenticated session.
           </p>
         </div>
 
@@ -85,30 +62,6 @@ export function SelectRolePage() {
                   <p className="mt-1 text-sm text-muted-foreground">{roleDescriptions[candidateRole]}</p>
                 </button>
               ))}
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Demo User</p>
-              <Select
-                onValueChange={(value) =>
-                  setSelectedUserByRole((prev) => ({
-                    ...prev,
-                    [role]: value
-                  }))
-                }
-                value={selectedUserId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {usersByRole[role].map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <Button className="w-full" onClick={handleContinue}>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,8 @@ import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 
 export function LandingPage() {
-  const { user, selectedRole, selectedUserId, isLoading, signInWithEmail, signUpWithEmail } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, selectedRole, selectedUserId, isLoading, signInWithEmail } = useAuthStore();
   const { data } = useDataStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,18 +35,6 @@ export function LandingPage() {
     if (maybeError) {
       setNotice(maybeError);
     }
-  }
-
-  async function handleSignUp() {
-    setNotice(undefined);
-
-    const maybeError = await signUpWithEmail(email.trim(), password);
-    if (maybeError) {
-      setNotice(maybeError);
-      return;
-    }
-
-    setNotice("Account created. If email confirmation is enabled, verify your inbox and then sign in.");
   }
 
   return (
@@ -113,8 +102,8 @@ export function LandingPage() {
                   <Button disabled={!canSubmit} size="lg" type="submit">
                     {isLoading ? "Signing in..." : "Sign In"}
                   </Button>
-                  <Button disabled={!canSubmit} onClick={handleSignUp} size="lg" type="button" variant="outline">
-                    {isLoading ? "Working..." : "Create Account"}
+                  <Button onClick={() => navigate("/register")} size="lg" type="button" variant="outline">
+                    Create Account
                   </Button>
                 </div>
               </form>

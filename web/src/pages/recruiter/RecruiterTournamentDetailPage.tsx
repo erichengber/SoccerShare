@@ -12,7 +12,7 @@ export function RecruiterTournamentDetailPage() {
 
   const tournament = data.tournaments.find((entry) => entry.id === tournamentId);
   if (!tournament) {
-    return <EmptyState description="Tournament not found in demo data." title="Tournament not found" />;
+    return <EmptyState description="Tournament not found in available data." title="Tournament not found" />;
   }
 
   const games = data.games.filter((game) => tournament.gameIds.includes(game.id));

@@ -81,7 +81,7 @@ export function AppShell() {
           </nav>
           <Separator className="my-3" />
           <p className="px-3 text-xs text-muted-foreground">
-            MVP mode with mock data plus coach team creation synced to Supabase.
+            Role-based workspace with coach team creation synced to Supabase.
           </p>
         </aside>
 

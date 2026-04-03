@@ -14,7 +14,7 @@ export function PrivacySettingsPage() {
   const isPublic = useMemo(() => player?.privacy === "public", [player]);
 
   if (!player) {
-    return <EmptyState description="Select a valid player demo user." title="Player not found" />;
+    return <EmptyState description="Player profile not found for this account." title="Player not found" />;
   }
 
   return (

@@ -34,7 +34,7 @@ export function CoachSchedulePage() {
 
   const coach = data.coaches.find((entry) => entry.id === selectedUserId);
   if (!coach) {
-    return <EmptyState description="Select a valid coach demo user." title="Coach not found" />;
+    return <EmptyState description="Coach profile not found for this account." title="Coach not found" />;
   }
   if (!coach.teamId) {
     return (
