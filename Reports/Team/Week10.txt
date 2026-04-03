@@ -1,0 +1,103 @@
+Project Summary
+Report date
+Team Name:
+Prepared for:
+3/27/2026
+SoccerShare
+Week 10
+
+Status Summary/Completed Activities
+Completed Sprint 5
+Allowing to fill in data to create personal user accounts - Max
+Connect clip viewing to the Supabase - Jayden
+Create onboarding pages for coaches - Eric
+Task
+% Done
+Due date
+Person Responsible
+Notes
+Completed Sprint 5
+100%
+3/27/2026
+All
+
+
+Allowing to fill in data to create personal user accounts 
+90%
+3/27/2026
+Max
+
+
+Create onboarding pages for coaches 
+100%
+3/27/2026
+Eric
+
+
+Connect team invites to the Supabase for better persistence
+100%
+3/27/2026
+Jayden
+
+
+
+Activities Planned for Next Week 
+Task
+Person Responsible
+
+
+
+
+Notes
+Start Sprint 6
+All
+
+
+
+
+
+
+Wrap up Allowing to fill in data to create personal user accounts 
+Max
+
+
+
+
+
+
+Work on persisting coaching schedules
+Jayden
+
+
+
+
+
+
+Create onboarding pages for recruiters 
+Eric
+
+
+
+
+
+
+
+Risk and issue history
+Issue
+Mitigation Plan
+
+
+N/A
+N/A
+
+
+
+Did your team meet with your faculty advisor this week? Yes/No. 
+Next Scheduled Meeting with your advisor_4/8__
+*At the end of each week email form to advisor and turn in on Canvas
+Github Insights
+
+
+
+AI Prompts
+None this week

@@ -1,0 +1,134 @@
+Project status Report
+Project Summary
+Report date
+Team Name:
+Prepared for:
+3/13/2026
+SoccerShare
+Week 9
+
+Status Summary/Completed Activities
+Completed Presentation 2
+Met with soccer coach to present progress and receive feedback and suggestions
+Task
+% Done
+Due date
+Person Responsible
+Notes
+Completed Presentation 2
+100%
+3/13/2026
+All
+
+
+Met with soccer coach to present progress and receive feedback and suggestions
+100%
+3/13/2026
+All
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Activities Planned for Next Week 
+Task
+Person Responsible
+
+
+
+
+Notes
+Start Sprint 5
+All
+
+
+
+
+
+
+Allowing to fill in data to create personal user accounts
+Max
+
+
+
+
+
+
+Connect clip viewing to the Supabase
+Jayden
+
+
+
+
+
+
+Create onboarding pages for coaches
+Eric
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Risk and issue history
+Issue
+Mitigation Plan
+
+
+N/A
+N/A
+
+
+
+Did your team meet with your faculty advisor this week? Yes/No. 
+NExt Scheduled Meeting with your advisor_3/25__
+*At the end of each week email form to advisor and turn in on Canvas.
+
+
+
+
+Github Insights
+No code pushes this week
+
+
+AI Prompts
+None this week

@@ -1,0 +1,129 @@
+Project status Report
+Project Summary
+Report date
+Team Name:
+Prepared for:
+3/6/2026
+SoccerShare
+Week 8
+
+Status Summary/Completed Activities
+Completed Sprint 4
+Added onboarding page for player account information post-registration
+Added clip uploading logic for Supabase
+Landing Page with authentication
+Task
+% Done
+Due date
+Person Responsible
+Notes
+Finished Sprint 4
+100%
+3/6/2026
+All
+
+
+Added onboarding page for player account information post-registration
+100%
+3/6/2026
+Eric
+
+
+Added clip uploading logic for Supabase
+100%
+3/6/2026
+Jayden
+
+
+Landing Page with authentication
+100%
+3/6/2026
+Max
+
+
+
+
+
+
+
+
+
+
+
+
+
+Activities Planned for Next Week 
+Task
+Person Responsible
+
+
+
+
+Notes
+Start Sprint 5
+All
+
+
+
+
+
+
+Allowing to fill in data to create personal user accounts
+Max
+
+
+
+
+
+
+Connect clip viewing to the Supabase
+Jayden
+
+
+
+
+
+
+Create onboarding pages for coaches
+Eric
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Risk and issue history
+Issue
+Mitigation Plan
+
+
+N/A
+N/A
+
+
+
+Did your team meet with your faculty advisor this week? Yes/No. 
+NExt Scheduled Meeting with your advisor_3/25__
+*At the end of each week email form to advisor and turn in on Canvas.
+
+
+
+
+Github Insights
+
+
+
+
+AI Prompts
+None this week
