@@ -26,7 +26,8 @@ npm run dev
 1. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` to `web/.env`.
 2. In Supabase SQL Editor, run `web/supabase/setup-storage.sql`.
 3. In Supabase SQL Editor, run `web/supabase/team-invites.sql`.
-4. Upload the existing `web/public` assets into Supabase Storage:
+4. In Supabase SQL Editor, run `web/supabase/coach-schedule.sql`.
+5. Upload the existing `web/public` assets into Supabase Storage:
 
 ```bash
 npm run supabase:seed:public
@@ -71,6 +72,7 @@ VITE_SUPABASE_ANON_KEY=your_anon_or_publishable_key
 - New uploads go to Supabase Storage and metadata is upserted into `public.clips`.
 - Clip detail edits also upsert into `public.clips`.
 - Team invites now load from and persist to `public.team_invites`.
+- Coach-created games and tournaments now load from and persist to `public.games` and `public.tournaments`.
 - If Supabase env vars are missing, the app falls back to in-memory clip behavior for local demo use.
 - Auth/session is fully handled through `src/store/authStore.ts` and `src/lib/supabaseClient.ts`.
 - Role + demo-user mapping is persisted in Supabase user metadata (`selected_role`, `selected_user_id`).

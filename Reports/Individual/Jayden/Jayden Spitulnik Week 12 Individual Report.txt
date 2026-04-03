@@ -1,0 +1,11 @@
+Time Dedicated to the Project
+- This week I committed 4 hours to the project. I focused on persisting the coach schedule workflow so games and tournaments are stored in Supabase instead of only existing in local state.
+
+Contribution to the Project Development Process
+- I contributed by implementing a Supabase-backed schedule client for tournaments and games, wiring schedule loading into app startup, and updating the coach schedule workflow so newly created games and tournaments persist through the backend. I also added the SQL setup required for the schedule tables and documented the new setup step for the team.
+
+Demonstration of Applied Knowledge
+- I demonstrated my knowledge by extending our TypeScript domain and Zustand data flow with async schedule actions while preserving the existing in-memory fallback when Supabase is not configured. I also handled the relationship between tournaments and their linked games so the UI stays consistent after reloads and when coaches attach a new game to an existing tournament.
+
+Reflection and Lessons Learned
+- This week reinforced that persisting schedule data is not just about saving rows. I learned that keeping parent-child relationships synchronized between tournaments and games is important for maintaining a reliable coach workflow and making sure the schedule view stays accurate after the app reloads.

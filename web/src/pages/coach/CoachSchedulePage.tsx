@@ -139,8 +139,8 @@ export function CoachSchedulePage() {
           <div className="md:col-span-2">
             <Button
               disabled={!opponentTeamId || !date}
-              onClick={() => {
-                const result = addCoachGame(coach.id, {
+              onClick={async () => {
+                const result = await addCoachGame(coach.id, {
                   opponentTeamId,
                   date,
                   location,
@@ -210,8 +210,8 @@ export function CoachSchedulePage() {
               disabled={
                 !tournamentName || !tournamentLocation || !tournamentStartDate || !tournamentEndDate
               }
-              onClick={() => {
-                const result = addCoachTournament(coach.id, {
+              onClick={async () => {
+                const result = await addCoachTournament(coach.id, {
                   name: tournamentName,
                   location: tournamentLocation,
                   startDate: tournamentStartDate,
