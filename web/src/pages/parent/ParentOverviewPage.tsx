@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,10 @@ export function ParentOverviewPage() {
   const parent = data.parents.find((entry) => entry.id === selectedUserId);
   if (!parent) {
     return <EmptyState description="Select a valid parent demo user." title="Parent not found" />;
+  }
+
+  if (parent.playerIds.length === 0) {
+    return <Navigate replace to="/onboarding/parent" />;
   }
 
   const players = data.players.filter((player) => parent.playerIds.includes(player.id));

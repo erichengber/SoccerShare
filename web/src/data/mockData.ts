@@ -208,6 +208,38 @@ const players: Player[] = [
     teammateIds: ["player-4", "player-5", "player-6"],
     privacy: "public",
     bio: "Sweeper keeper with strong command of the penalty area."
+  },
+  {
+    id: "player-11",
+    role: "player",
+    firstName: "Test",
+    lastName: "Player",
+    email: "test.player@example.com",
+    avatarUrl: "https://i.pravatar.cc/300?img=68",
+    gradYear: 2029,
+    position: "Central Midfielder",
+    jerseyNumber: 0,
+    teamIds: [],
+    parentIds: [],
+    teammateIds: [],
+    privacy: "private",
+    bio: ""
+  },
+  {
+    id: "player-12",
+    role: "player",
+    firstName: "Another",
+    lastName: "Test",
+    email: "another.test@example.com",
+    avatarUrl: "https://i.pravatar.cc/300?img=69",
+    gradYear: 2030,
+    position: "Forward",
+    jerseyNumber: 0,
+    teamIds: [],
+    parentIds: [],
+    teammateIds: [],
+    privacy: "private",
+    bio: ""
   }
 ];
 
@@ -256,6 +288,15 @@ const parents: Parent[] = [
     email: "dana.reed@example.com",
     avatarUrl: "https://i.pravatar.cc/300?img=11",
     playerIds: ["player-6", "player-10"]
+  },
+  {
+    id: "parent-6",
+    role: "parent",
+    firstName: "Test",
+    lastName: "Parent",
+    email: "test.parent@example.com",
+    avatarUrl: "https://i.pravatar.cc/300?img=12",
+    playerIds: []
   }
 ];
 
@@ -328,6 +369,16 @@ const recruiters: Recruiter[] = [
     avatarUrl: "https://i.pravatar.cc/300?img=17",
     organization: "River Valley FC Academy",
     region: "Central"
+  },
+  {
+    id: "recruiter-3",
+    role: "recruiter",
+    firstName: "Avery",
+    lastName: "Brooks",
+    email: "avery.brooks@example.com",
+    avatarUrl: "https://i.pravatar.cc/300?img=19",
+    organization: "",
+    region: ""
   }
 ];
 
@@ -705,8 +756,8 @@ export const mockData: AppData = {
 };
 
 export const defaultUserByRole: Record<UserRole, string> = {
-  player: "player-1",
-  parent: "parent-4",
+  player: "player-11",
+  parent: "parent-6",
   coach: "coach-5",
-  recruiter: "recruiter-1"
+  recruiter: "recruiter-3"
 };

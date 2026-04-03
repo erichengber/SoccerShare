@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { mockData } from "@/data/mockData";
 import { fetchClipsFromSupabase, upsertClipInSupabase } from "@/lib/clipClient";
+import { upsertParentInSupabase, upsertPlayerInSupabase } from "@/lib/familyClient";
+import { upsertRecruiterInSupabase } from "@/lib/recruiterClient";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { createCoachTeamInSupabase, fetchCoachTeamFromSupabase } from "@/lib/teamClient";
 import { uploadClipMedia } from "@/lib/mediaClient";
@@ -14,9 +16,12 @@ import type {
   CoachGameInput,
   CoachTournamentInput,
   CreateCoachTeamInput,
+  Parent,
+  ParentOnboardingInput,
   Player,
   PlayerOnboardingInput,
   PlayerPrivacy,
+  RecruiterOnboardingInput,
   Team,
   TeamInvite,
   TeamInviteResponseInput
@@ -44,8 +49,10 @@ interface DataState {
   uploadClip: (input: ClipUploadInput) => AsyncActionResult;
   updateClip: (input: ClipUpdateInput) => AsyncActionResult;
   setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => void;
-  completePlayerOnboarding: (input: PlayerOnboardingInput) => ActionResult;
+  completePlayerOnboarding: (input: PlayerOnboardingInput) => AsyncActionResult;
   completeCoachOnboarding: (input: CoachOnboardingInput) => AsyncActionResult;
+  completeRecruiterOnboarding: (input: RecruiterOnboardingInput) => AsyncActionResult;
+  completeParentOnboarding: (input: ParentOnboardingInput) => AsyncActionResult;
 }
 
 function addTeamToPlayer(player: Player, teamId: string): Player {
@@ -629,11 +636,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       };
     });
   },
-  completePlayerOnboarding: (input) => {
-    // Supabase handoff note:
-    // - Replace this local onboarding write with a DB mutation (profiles/players row update).
-    // - Persist avatar URL from Storage and onboarding fields in one transaction/RPC when possible.
-    // - Keep team membership sync (`team_id` relation or join table) consistent with existing reads.
+  completePlayerOnboarding: async (input) => {
     const { data } = get();
     const player = data.players.find((entry) => entry.id === input.playerId);
     if (!player) {
@@ -659,12 +662,38 @@ export const useDataStore = create<DataState>((set, get) => ({
       return { success: false, error: "Profile picture is required." };
     }
 
+    const nextTeamIds = [input.teamId];
+    const playerForSupabase: Player = {
+      ...player,
+      firstName: input.firstName?.trim() || player.firstName,
+      lastName: input.lastName?.trim() || player.lastName,
+      email: input.email?.trim() || player.email,
+      position: input.position,
+      jerseyNumber: input.jerseyNumber,
+      teamIds: nextTeamIds,
+      bio,
+      avatarUrl
+    };
+
+    const upsertResult = await upsertPlayerInSupabase({
+      player: playerForSupabase
+    });
+
+    if (!upsertResult.data) {
+      return {
+        success: false,
+        error: upsertResult.error ?? "Unable to save player profile."
+      };
+    }
+
     set((state) => {
-      const nextTeamIds = [input.teamId];
       const players = state.data.players.map((entry) =>
         entry.id === input.playerId
           ? {
               ...entry,
+              firstName: playerForSupabase.firstName,
+              lastName: playerForSupabase.lastName,
+              email: playerForSupabase.email,
               position: input.position,
               jerseyNumber: input.jerseyNumber,
               teamIds: nextTeamIds,
@@ -677,6 +706,9 @@ export const useDataStore = create<DataState>((set, get) => ({
         entry.id === input.playerId && entry.role === "player"
           ? {
               ...entry,
+              firstName: playerForSupabase.firstName,
+              lastName: playerForSupabase.lastName,
+              email: playerForSupabase.email,
               position: input.position,
               jerseyNumber: input.jerseyNumber,
               teamIds: nextTeamIds,
@@ -767,6 +799,179 @@ export const useDataStore = create<DataState>((set, get) => ({
               }
             : entry
         )
+      }
+    }));
+
+    return { success: true };
+  },
+  completeRecruiterOnboarding: async (input) => {
+    const { data } = get();
+    const recruiter = data.recruiters.find((entry) => entry.id === input.recruiterId);
+    if (!recruiter) {
+      return { success: false, error: "Recruiter not found." };
+    }
+
+    const organization = input.organization.trim();
+    if (!organization) {
+      return { success: false, error: "Organization is required." };
+    }
+
+    const region = input.region.trim();
+    if (!region) {
+      return { success: false, error: "Region is required." };
+    }
+
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    const upsertResult = await upsertRecruiterInSupabase({
+      recruiterId: input.recruiterId,
+      firstName: input.firstName?.trim() || recruiter.firstName,
+      lastName: input.lastName?.trim() || recruiter.lastName,
+      email: input.email?.trim() || recruiter.email,
+      avatarUrl,
+      organization,
+      region
+    });
+
+    if (!upsertResult.data) {
+      return {
+        success: false,
+        error: upsertResult.error ?? "Unable to save recruiter profile."
+      };
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        recruiters: state.data.recruiters.map((entry) =>
+          entry.id === input.recruiterId
+            ? {
+                ...entry,
+                organization,
+                region,
+                avatarUrl
+              }
+            : entry
+        ),
+        users: state.data.users.map((entry) =>
+          entry.id === input.recruiterId && entry.role === "recruiter"
+            ? {
+                ...entry,
+                organization,
+                region,
+                avatarUrl
+              }
+            : entry
+        )
+      }
+    }));
+
+    return { success: true };
+  },
+  completeParentOnboarding: async (input) => {
+    const { data } = get();
+    const parent = data.parents.find((entry) => entry.id === input.parentId);
+    if (!parent) {
+      return { success: false, error: "Parent not found." };
+    }
+
+    const player = data.players.find((entry) => entry.id === input.playerId);
+    if (!player) {
+      return { success: false, error: "Selected player was not found." };
+    }
+
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    const nextPlayerIds = parent.playerIds.includes(input.playerId) ? parent.playerIds : [input.playerId];
+    const nextParentIds = player.parentIds.includes(input.parentId)
+      ? player.parentIds
+      : [...player.parentIds, input.parentId];
+    const parentForSupabase: Parent = {
+      ...parent,
+      firstName: input.firstName?.trim() || parent.firstName,
+      lastName: input.lastName?.trim() || parent.lastName,
+      email: input.email?.trim() || parent.email,
+      avatarUrl,
+      playerIds: nextPlayerIds
+    };
+    const playerForSupabase: Player = {
+      ...player,
+      parentIds: nextParentIds
+    };
+
+    const [parentUpsertResult, playerUpsertResult] = await Promise.all([
+      upsertParentInSupabase({
+        parent: parentForSupabase
+      }),
+      upsertPlayerInSupabase({
+        player: playerForSupabase
+      })
+    ]);
+
+    if (!parentUpsertResult.data) {
+      return {
+        success: false,
+        error: parentUpsertResult.error ?? "Unable to save parent profile."
+      };
+    }
+
+    if (!playerUpsertResult.data) {
+      return {
+        success: false,
+        error: playerUpsertResult.error ?? "Unable to link player profile."
+      };
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        parents: state.data.parents.map((entry) =>
+          entry.id === input.parentId
+            ? {
+                ...entry,
+                firstName: parentForSupabase.firstName,
+                lastName: parentForSupabase.lastName,
+                email: parentForSupabase.email,
+                avatarUrl,
+                playerIds: nextPlayerIds
+              }
+            : entry
+        ),
+        players: state.data.players.map((entry) =>
+          entry.id === input.playerId
+            ? {
+                ...entry,
+                parentIds: nextParentIds
+              }
+            : entry
+        ),
+        users: state.data.users.map((entry) => {
+          if (entry.id === input.parentId && entry.role === "parent") {
+            return {
+                ...entry,
+              firstName: parentForSupabase.firstName,
+              lastName: parentForSupabase.lastName,
+              email: parentForSupabase.email,
+              avatarUrl,
+              playerIds: nextPlayerIds
+            };
+          }
+
+          if (entry.id === input.playerId && entry.role === "player") {
+            return {
+              ...entry,
+              parentIds: nextParentIds
+            };
+          }
+
+          return entry;
+        })
       }
     }));
 
