@@ -207,6 +207,9 @@ export interface PlayerOnboardingInput {
   teamId: string;
   bio: string;
   avatarUrl: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 }
 
 export interface CoachOnboardingInput {
@@ -215,6 +218,25 @@ export interface CoachOnboardingInput {
   teamName: string;
   level: TeamLevel;
   schoolId?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface RecruiterOnboardingInput {
+  recruiterId: string;
+  avatarUrl: string;
+  organization: string;
+  region: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
+export interface ParentOnboardingInput {
+  parentId: string;
+  avatarUrl: string;
+  playerId: string;
   firstName?: string;
   lastName?: string;
   email?: string;

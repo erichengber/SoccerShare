@@ -1,17 +1,29 @@
+import { Navigate } from "react-router-dom";
 import { PlayerCard } from "@/components/cards/PlayerCard";
 import { TournamentCard } from "@/components/cards/TournamentCard";
 import { FiltersPanel } from "@/components/filters/FiltersPanel";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { filterRecruiterPlayers, getTeamName } from "@/lib/selectors";
+import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import { useRecruiterStore } from "@/store/recruiterStore";
 import { useUIStore } from "@/store/uiStore";
 
 export function RecruiterTournamentBrowserPage() {
+  const { selectedUserId } = useAuthStore();
   const { data } = useDataStore();
   const { recruiterFilters, resetRecruiterFilters, setRecruiterFilters } = useUIStore();
   const { favoritePlayerIds, toggleFavoritePlayer } = useRecruiterStore();
+  const recruiter = data.recruiters.find((entry) => entry.id === selectedUserId);
+
+  if (!recruiter) {
+    return <EmptyState description="Select a valid recruiter demo user." title="Recruiter not found" />;
+  }
+
+  if (!recruiter.organization.trim() || !recruiter.region.trim()) {
+    return <Navigate replace to="/onboarding/recruiter" />;
+  }
 
   const filteredPlayers = filterRecruiterPlayers(data, recruiterFilters);
   const gradYears = [...new Set(data.players.map((player) => player.gradYear))].sort((a, b) => a - b);

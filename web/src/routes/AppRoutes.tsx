@@ -6,7 +6,9 @@ import { LoginPage } from "@/pages/public/LoginPage";
 import { RegisterPage } from "@/pages/public/RegisterPage";
 import { SelectRolePage } from "@/pages/public/SelectRolePage";
 import { PlayerOnboardingPage } from "@/pages/public/PlayerOnboardingPage";
+import { ParentOnboardingPage } from "@/pages/public/ParentOnboardingPage";
 import { CoachOnboardingPage } from "@/pages/public/CoachOnboardingPage";
+import { RecruiterOnboardingPage } from "@/pages/public/RecruiterOnboardingPage";
 import { PlayerOverviewPage } from "@/pages/player/PlayerOverviewPage";
 import { PlayerProfilePage } from "@/pages/player/PlayerProfilePage";
 import { PlayerClipsPage } from "@/pages/player/PlayerClipsPage";
@@ -39,8 +41,16 @@ export function AppRoutes() {
         <Route element={<PlayerOnboardingPage />} path="onboarding/player" />
       </Route>
 
+      <Route element={<ProtectedRoute allow={["parent"]} />}>
+        <Route element={<ParentOnboardingPage />} path="onboarding/parent" />
+      </Route>
+
       <Route element={<ProtectedRoute allow={["coach"]} />}>
         <Route element={<CoachOnboardingPage />} path="onboarding/coach" />
+      </Route>
+
+      <Route element={<ProtectedRoute allow={["recruiter"]} />}>
+        <Route element={<RecruiterOnboardingPage />} path="onboarding/recruiter" />
       </Route>
 
       <Route element={<ProtectedRoute allow={["player"]} />}>
