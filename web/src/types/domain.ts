@@ -44,6 +44,7 @@ export interface Player extends UserBase {
   gradYear: number;
   position: PlayerPosition;
   jerseyNumber: number;
+  jerseyNumbersByTeam?: Record<string, number>;
   teamIds: string[];
   parentIds: string[];
   teammateIds: string[];

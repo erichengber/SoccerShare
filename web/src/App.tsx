@@ -6,9 +6,12 @@ import { useDataStore } from "@/store/dataStore";
 export default function App() {
   const initializeAuth = useAuthStore((state) => state.initialize);
   const isInitialized = useAuthStore((state) => state.isInitialized);
+  const user = useAuthStore((state) => state.user);
+  const selectedRole = useAuthStore((state) => state.selectedRole);
   const loadClips = useDataStore((state) => state.loadClips);
   const loadTeamInvites = useDataStore((state) => state.loadTeamInvites);
   const loadSchedule = useDataStore((state) => state.loadSchedule);
+  const ensureAuthProfile = useDataStore((state) => state.ensureAuthProfile);
 
   useEffect(() => {
     void initializeAuth();
@@ -25,6 +28,21 @@ export default function App() {
   useEffect(() => {
     void loadSchedule();
   }, [loadSchedule]);
+
+  useEffect(() => {
+    if (!user || !selectedRole) return;
+
+    ensureAuthProfile({
+      authUserId: user.id,
+      role: selectedRole,
+      email: user.email,
+      firstName: typeof user.user_metadata?.first_name === "string" ? user.user_metadata.first_name : undefined,
+      lastName: typeof user.user_metadata?.last_name === "string" ? user.user_metadata.last_name : undefined,
+      organization: typeof user.user_metadata?.organization === "string" ? user.user_metadata.organization : undefined,
+      recruiterRegion:
+        typeof user.user_metadata?.recruiter_region === "string" ? user.user_metadata.recruiter_region : undefined
+    });
+  }, [ensureAuthProfile, selectedRole, user]);
 
   if (!isInitialized) {
     return (

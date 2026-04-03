@@ -32,7 +32,12 @@ export function LoginPage() {
       }
 
       const { selectedRole, selectedUserId } = useAuthStore.getState();
-      navigate(selectedRole ? getDefaultPathForRole(selectedRole, selectedUserId, data) : "/select-role");
+      if (!selectedRole) {
+        navigate("/select-role");
+        return;
+      }
+
+      navigate(getDefaultPathForRole(selectedRole, selectedUserId, data));
     } finally {
       setIsSubmitting(false);
     }
@@ -57,7 +62,7 @@ export function LoginPage() {
                   disabled={isSubmitting}
                   id="email"
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@school.org"
+                  placeholder="you@yourdomain.com"
                   required
                   type="email"
                   value={email}

@@ -23,7 +23,7 @@ interface AuthState {
     password: string,
     metadata?: Record<string, unknown>
   ) => Promise<string | undefined>;
-  selectRole: (role: UserRole, userId: string) => Promise<string | undefined>;
+  selectRole: (role: UserRole) => Promise<string | undefined>;
   signOut: () => Promise<void>;
   clearError: () => void;
 }
@@ -35,23 +35,27 @@ function parseRoleFromMetadata(user: User | null): UserRole | undefined {
     : undefined;
 }
 
-function parseUserIdFromMetadata(user: User | null): string | undefined {
+function parseUserIdFromMetadata(user: User | null, selectedRole?: UserRole): string | undefined {
+  // Backward compatibility: keep reading legacy selected_user_id if present.
   const userId = (user?.user_metadata as AuthMetadata | undefined)?.selected_user_id;
-  return typeof userId === "string" && userId.length > 0 ? userId : undefined;
+  if (typeof userId === "string" && userId.length > 0) return userId;
+
+  // Non-demo flow: role-scoped pages use the authenticated user id.
+  if (selectedRole && user?.id) return user.id;
+
+  return undefined;
 }
 
 function parseMetadataOverride(
   metadata?: Record<string, unknown>
-): { selectedRole?: UserRole; selectedUserId?: string } {
+): { selectedRole?: UserRole } {
   const selectedRole = metadata?.selected_role;
-  const selectedUserId = metadata?.selected_user_id;
 
   return {
     selectedRole:
       selectedRole === "player" || selectedRole === "parent" || selectedRole === "coach" || selectedRole === "recruiter"
         ? selectedRole
-        : undefined,
-    selectedUserId: typeof selectedUserId === "string" && selectedUserId.length > 0 ? selectedUserId : undefined
+        : undefined
   };
 }
 
@@ -60,11 +64,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
   const applySession = (session: Session | null) => {
     const user = session?.user ?? null;
+    const selectedRole = parseRoleFromMetadata(user);
     set({
       user,
       session,
-      selectedRole: parseRoleFromMetadata(user),
-      selectedUserId: parseUserIdFromMetadata(user)
+      selectedRole,
+      selectedUserId: parseUserIdFromMetadata(user, selectedRole)
     });
   };
 
@@ -120,14 +125,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
         applySession(data.session);
         set((state) => ({
           selectedRole: state.selectedRole ?? metadataOverride.selectedRole,
-          selectedUserId: state.selectedUserId ?? metadataOverride.selectedUserId
+          selectedUserId: state.selectedUserId ?? data.session?.user.id
         }));
       }
       set({ isLoading: false, error: error?.message });
       return error?.message;
     },
 
-    selectRole: async (role, userId) => {
+    selectRole: async (role) => {
       const { user } = get();
       if (!user) {
         const message = "You must sign in before selecting a role.";
@@ -140,7 +145,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         data: {
           ...(user.user_metadata ?? {}),
           selected_role: role,
-          selected_user_id: userId
+          selected_user_id: null
         }
       });
 
@@ -152,7 +157,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       set({
         user: data.user,
         selectedRole: role,
-        selectedUserId: userId,
+        selectedUserId: data.user.id,
         isLoading: false
       });
       return undefined;

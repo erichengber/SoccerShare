@@ -17,7 +17,7 @@ export function RecruiterGameDetailPage() {
 
   const game = data.games.find((entry) => entry.id === gameId);
   if (!game) {
-    return <EmptyState description="Game not found in demo data." title="Game not found" />;
+    return <EmptyState description="Game not found in available data." title="Game not found" />;
   }
 
   const homeTeam = data.teams.find((team) => team.id === game.homeTeamId);

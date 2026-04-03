@@ -26,6 +26,7 @@ import type {
   CoachGameInput,
   CoachTournamentInput,
   CreateCoachTeamInput,
+  Game,
   Parent,
   ParentOnboardingInput,
   Player,
@@ -35,7 +36,8 @@ import type {
   Team,
   TeamInvite,
   TeamInviteResponseInput,
-  Tournament
+  Tournament,
+  UserRole
 } from "@/types/domain";
 
 interface ActionResult {
@@ -59,6 +61,15 @@ interface DataState {
   loadClips: () => Promise<void>;
   loadTeamInvites: () => Promise<void>;
   loadSchedule: () => Promise<void>;
+  ensureAuthProfile: (input: {
+    authUserId: string;
+    role: UserRole;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    organization?: string;
+    recruiterRegion?: string;
+  }) => void;
   createCoachTeam: (coachId: string, input: CreateCoachTeamInput) => AsyncActionResult;
   syncCoachTeamFromSupabase: (coachId: string) => AsyncActionResult;
   invitePlayerToTeam: (coachId: string, playerId: string) => AsyncActionResult;
@@ -330,6 +341,122 @@ export const useDataStore = create<DataState>((set, get) => ({
           ...state.data,
           games,
           tournaments
+        }
+      };
+    });
+  },
+  ensureAuthProfile: (input) => {
+    const normalizedFirstName = input.firstName?.trim() || "New";
+    const normalizedLastName = input.lastName?.trim() || "User";
+    const normalizedEmail = input.email?.trim() || "";
+    const avatarSeed = `${normalizedFirstName}-${normalizedLastName}`.toLowerCase();
+    const fallbackAvatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(avatarSeed)}`;
+
+    set((state) => {
+      const existingUser = state.data.users.find((entry) => entry.id === input.authUserId);
+      if (existingUser && existingUser.role === input.role) {
+        return state;
+      }
+
+      const baseUsers = state.data.users.filter((entry) => entry.id !== input.authUserId);
+      const basePlayers = state.data.players.filter((entry) => entry.id !== input.authUserId);
+      const baseParents = state.data.parents.filter((entry) => entry.id !== input.authUserId);
+      const baseCoaches = state.data.coaches.filter((entry) => entry.id !== input.authUserId);
+      const baseRecruiters = state.data.recruiters.filter((entry) => entry.id !== input.authUserId);
+
+      const nextData: AppData = {
+        ...state.data,
+        users: baseUsers,
+        players: basePlayers,
+        parents: baseParents,
+        coaches: baseCoaches,
+        recruiters: baseRecruiters
+      };
+
+      if (input.role === "player") {
+        const player = {
+          id: input.authUserId,
+          role: "player" as const,
+          firstName: normalizedFirstName,
+          lastName: normalizedLastName,
+          email: normalizedEmail,
+          avatarUrl: fallbackAvatarUrl,
+          gradYear: new Date().getFullYear() + 2,
+          position: "Central Midfielder" as const,
+          jerseyNumber: 0,
+          teamIds: [],
+          parentIds: [],
+          teammateIds: [],
+          privacy: "public" as const,
+          bio: ""
+        };
+
+        return {
+          data: {
+            ...nextData,
+            users: [player, ...nextData.users],
+            players: [player, ...nextData.players]
+          }
+        };
+      }
+
+      if (input.role === "parent") {
+        const parent = {
+          id: input.authUserId,
+          role: "parent" as const,
+          firstName: normalizedFirstName,
+          lastName: normalizedLastName,
+          email: normalizedEmail,
+          avatarUrl: fallbackAvatarUrl,
+          playerIds: []
+        };
+
+        return {
+          data: {
+            ...nextData,
+            users: [parent, ...nextData.users],
+            parents: [parent, ...nextData.parents]
+          }
+        };
+      }
+
+      if (input.role === "coach") {
+        const coach = {
+          id: input.authUserId,
+          role: "coach" as const,
+          firstName: normalizedFirstName,
+          lastName: normalizedLastName,
+          email: normalizedEmail,
+          avatarUrl: fallbackAvatarUrl,
+          teamId: undefined,
+          schoolId: undefined
+        };
+
+        return {
+          data: {
+            ...nextData,
+            users: [coach, ...nextData.users],
+            coaches: [coach, ...nextData.coaches]
+          }
+        };
+      }
+
+      const recruiter = {
+        id: input.authUserId,
+        role: "recruiter" as const,
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
+        email: normalizedEmail,
+        avatarUrl: fallbackAvatarUrl,
+        organization: input.organization?.trim() || "Independent Scout",
+        region: input.recruiterRegion?.trim() || "Unspecified"
+      };
+
+      return {
+        data: {
+          ...nextData,
+          users: [recruiter, ...nextData.users],
+          recruiters: [recruiter, ...nextData.recruiters]
         }
       };
     });
