@@ -8,6 +8,11 @@ import {
   fetchTeamInvitesFromSupabase,
   respondToTeamInviteInSupabase
 } from "@/lib/teamInviteClient";
+import {
+  createGameInSupabase,
+  createTournamentInSupabase,
+  fetchScheduleFromSupabase
+} from "@/lib/scheduleClient";
 import { uploadClipMedia } from "@/lib/mediaClient";
 import type {
   AppData,
@@ -19,12 +24,14 @@ import type {
   CoachGameInput,
   CoachTournamentInput,
   CreateCoachTeamInput,
+  Game,
   Player,
   PlayerOnboardingInput,
   PlayerPrivacy,
   Team,
   TeamInvite,
-  TeamInviteResponseInput
+  TeamInviteResponseInput,
+  Tournament
 } from "@/types/domain";
 
 interface ActionResult {
@@ -42,14 +49,18 @@ interface DataState {
   teamInvitesInitialized: boolean;
   teamInvitesLoading: boolean;
   teamInvitesSyncError?: string;
+  scheduleInitialized: boolean;
+  scheduleLoading: boolean;
+  scheduleSyncError?: string;
   loadClips: () => Promise<void>;
   loadTeamInvites: () => Promise<void>;
+  loadSchedule: () => Promise<void>;
   createCoachTeam: (coachId: string, input: CreateCoachTeamInput) => AsyncActionResult;
   syncCoachTeamFromSupabase: (coachId: string) => AsyncActionResult;
   invitePlayerToTeam: (coachId: string, playerId: string) => AsyncActionResult;
   respondToTeamInvite: (input: TeamInviteResponseInput) => AsyncActionResult;
-  addCoachGame: (coachId: string, input: CoachGameInput) => ActionResult;
-  addCoachTournament: (coachId: string, input: CoachTournamentInput) => ActionResult;
+  addCoachGame: (coachId: string, input: CoachGameInput) => AsyncActionResult;
+  addCoachTournament: (coachId: string, input: CoachTournamentInput) => AsyncActionResult;
   uploadClip: (input: ClipUploadInput) => AsyncActionResult;
   updateClip: (input: ClipUpdateInput) => AsyncActionResult;
   setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => void;
@@ -161,6 +172,52 @@ function mergeTeamInvites(localInvites: TeamInvite[], remoteInvites: TeamInvite[
   );
 }
 
+function mergeGames(localGames: Game[], remoteGames: Game[]) {
+  const gamesById = new Map<string, Game>();
+
+  localGames.forEach((game) => {
+    gamesById.set(game.id, game);
+  });
+  remoteGames.forEach((game) => {
+    gamesById.set(game.id, game);
+  });
+
+  return Array.from(gamesById.values()).sort(
+    (left, right) => Date.parse(left.date) - Date.parse(right.date)
+  );
+}
+
+function mergeTournaments(localTournaments: Tournament[], remoteTournaments: Tournament[]) {
+  const tournamentsById = new Map<string, Tournament>();
+
+  localTournaments.forEach((tournament) => {
+    tournamentsById.set(tournament.id, tournament);
+  });
+  remoteTournaments.forEach((tournament) => {
+    tournamentsById.set(tournament.id, tournament);
+  });
+
+  return Array.from(tournamentsById.values()).sort(
+    (left, right) => Date.parse(left.startDate) - Date.parse(right.startDate)
+  );
+}
+
+function hydrateTournamentGameIds(tournaments: Tournament[], games: Game[]) {
+  const gameIdsByTournamentId = new Map<string, string[]>();
+
+  games.forEach((game) => {
+    if (!game.tournamentId) return;
+    const gameIds = gameIdsByTournamentId.get(game.tournamentId) ?? [];
+    gameIds.push(game.id);
+    gameIdsByTournamentId.set(game.tournamentId, gameIds);
+  });
+
+  return tournaments.map((tournament) => ({
+    ...tournament,
+    gameIds: gameIdsByTournamentId.get(tournament.id) ?? tournament.gameIds
+  }));
+}
+
 export const useDataStore = create<DataState>((set, get) => ({
   data: mockData,
   clipsInitialized: false,
@@ -169,6 +226,9 @@ export const useDataStore = create<DataState>((set, get) => ({
   teamInvitesInitialized: false,
   teamInvitesLoading: false,
   teamInvitesSyncError: undefined,
+  scheduleInitialized: false,
+  scheduleLoading: false,
+  scheduleSyncError: undefined,
   loadClips: async () => {
     const { clipsInitialized, clipsLoading } = get();
     if (clipsInitialized || clipsLoading) {
@@ -228,6 +288,45 @@ export const useDataStore = create<DataState>((set, get) => ({
         teamInvites: mergeTeamInvites(state.data.teamInvites, result.data ?? [])
       }
     }));
+  },
+  loadSchedule: async () => {
+    const { scheduleInitialized, scheduleLoading } = get();
+    if (scheduleInitialized || scheduleLoading) {
+      return;
+    }
+
+    set({
+      scheduleLoading: true
+    });
+
+    const result = await fetchScheduleFromSupabase();
+    if (!result.data) {
+      set({
+        scheduleInitialized: true,
+        scheduleLoading: false,
+        scheduleSyncError: result.error ?? "Unable to sync schedule from Supabase."
+      });
+      return;
+    }
+
+    set((state) => {
+      const games = mergeGames(state.data.games, result.data?.games ?? []);
+      const tournaments = hydrateTournamentGameIds(
+        mergeTournaments(state.data.tournaments, result.data?.tournaments ?? []),
+        games
+      );
+
+      return {
+        scheduleInitialized: true,
+        scheduleLoading: false,
+        scheduleSyncError: undefined,
+        data: {
+          ...state.data,
+          games,
+          tournaments
+        }
+      };
+    });
   },
   createCoachTeam: async (coachId, input) => {
     const { data } = get();
@@ -491,7 +590,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     return { success: true };
   },
-  addCoachGame: (coachId, input) => {
+  addCoachGame: async (coachId, input) => {
     const { data } = get();
     const coach = data.coaches.find((entry) => entry.id === coachId);
     if (!coach) {
@@ -522,7 +621,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     const isHome = input.homeOrAway === "home";
     const gameId = `game-${Date.now()}`;
-    const newGame = {
+    const nextGame = {
       id: gameId,
       tournamentId: input.tournamentId,
       date: date.toISOString(),
@@ -532,24 +631,42 @@ export const useDataStore = create<DataState>((set, get) => ({
       createdByCoachId: coachId
     };
 
-    set((state) => ({
-      data: {
-        ...state.data,
-        games: [newGame, ...state.data.games],
-        tournaments: input.tournamentId
-          ? state.data.tournaments.map((tournament) =>
-              tournament.id === input.tournamentId &&
-              !tournament.gameIds.includes(gameId)
-                ? { ...tournament, gameIds: [...tournament.gameIds, gameId] }
-                : tournament
-            )
-          : state.data.tournaments
-      }
-    }));
+    const createResult = await createGameInSupabase(nextGame);
+    if (!createResult.data) {
+      return {
+        success: false,
+        error: createResult.error ?? "Unable to add game."
+      };
+    }
+
+    set((state) => {
+      const games = mergeGames(state.data.games, [createResult.data as Game]);
+      const tournaments = hydrateTournamentGameIds(
+        state.data.tournaments.map((tournament) =>
+          input.tournamentId && tournament.id === input.tournamentId
+            ? {
+                ...tournament,
+                gameIds: tournament.gameIds.includes(gameId)
+                  ? tournament.gameIds
+                  : [...tournament.gameIds, gameId]
+              }
+            : tournament
+        ),
+        games
+      );
+
+      return {
+        data: {
+          ...state.data,
+          games,
+          tournaments
+        }
+      };
+    });
 
     return { success: true };
   },
-  addCoachTournament: (coachId, input) => {
+  addCoachTournament: async (coachId, input) => {
     const { data } = get();
     const coach = data.coaches.find((entry) => entry.id === coachId);
     if (!coach) {
@@ -580,21 +697,27 @@ export const useDataStore = create<DataState>((set, get) => ({
       return { success: false, error: "Tournament end date must be on or after the start date." };
     }
 
+    const tournamentId = `tournament-${Date.now()}`;
+    const createResult = await createTournamentInSupabase({
+      id: tournamentId,
+      name,
+      location,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      createdByCoachId: coachId
+    });
+
+    if (!createResult.data) {
+      return {
+        success: false,
+        error: createResult.error ?? "Unable to create tournament."
+      };
+    }
+
     set((state) => ({
       data: {
         ...state.data,
-        tournaments: [
-          {
-            id: `tournament-${Date.now()}`,
-            name,
-            location,
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            gameIds: [],
-            createdByCoachId: coachId
-          },
-          ...state.data.tournaments
-        ]
+        tournaments: mergeTournaments(state.data.tournaments, [createResult.data as Tournament])
       }
     }));
 
