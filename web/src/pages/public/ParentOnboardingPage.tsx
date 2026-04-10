@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { HeartHandshake, Shield, Upload } from "lucide-react";
@@ -31,12 +31,32 @@ export function ParentOnboardingPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { user, selectedRole, selectedUserId } = useAuthStore();
-  const { data, completeParentOnboarding } = useDataStore();
+  const {
+    data,
+    completeParentOnboarding,
+    playerDirectory,
+    playerDirectoryInitialized,
+    playerDirectoryLoading,
+    playerDirectorySyncError
+  } = useDataStore();
   const parent = data.parents.find((entry) => entry.id === selectedUserId);
 
   const [avatarUrl, setAvatarUrl] = useState(parent?.avatarUrl ?? "");
-  const [playerId, setPlayerId] = useState("player-11");
+  const [playerId, setPlayerId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const selectablePlayers = playerDirectory;
+  const isPlayerDirectoryPending = !playerDirectoryInitialized || playerDirectoryLoading;
+
+  useEffect(() => {
+    if (!selectablePlayers.length) {
+      setPlayerId("");
+      return;
+    }
+
+    if (!selectablePlayers.some((player) => player.id === playerId)) {
+      setPlayerId(selectablePlayers[0].id);
+    }
+  }, [playerId, selectablePlayers]);
 
   if (selectedRole !== "parent" || !selectedUserId || !parent) {
     return <Navigate replace to="/" />;
@@ -51,7 +71,6 @@ export function ParentOnboardingPage() {
   const parentLastName = parent.lastName;
   const parentEmail = parent.email;
   const initials = `${parent.firstName[0] ?? ""}${parent.lastName[0] ?? ""}`.toUpperCase();
-  const selectablePlayers = data.players;
 
   async function handleAvatarFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -88,6 +107,11 @@ export function ParentOnboardingPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (!playerId) {
+      setError("Select a player to link before finishing setup.");
+      return;
+    }
 
     const result = await completeParentOnboarding({
       parentId,
@@ -180,7 +204,7 @@ export function ParentOnboardingPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="parent-player">Linked player</Label>
-                <Select onValueChange={setPlayerId} value={playerId}>
+                <Select disabled={isPlayerDirectoryPending || !selectablePlayers.length} onValueChange={setPlayerId} value={playerId}>
                   <SelectTrigger id="parent-player">
                     <SelectValue placeholder="Select player" />
                   </SelectTrigger>
@@ -192,6 +216,17 @@ export function ParentOnboardingPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {isPlayerDirectoryPending ? (
+                  <p className="text-sm text-slate-500">Loading all players from the database...</p>
+                ) : null}
+                {!isPlayerDirectoryPending && playerDirectorySyncError ? (
+                  <p className="text-sm text-amber-700">
+                    Could not refresh the player directory from Supabase. Showing the currently available player list.
+                  </p>
+                ) : null}
+                {!isPlayerDirectoryPending && !selectablePlayers.length ? (
+                  <p className="text-sm text-slate-500">No players were found in the database yet.</p>
+                ) : null}
               </div>
 
               <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
@@ -200,7 +235,7 @@ export function ParentOnboardingPage() {
 
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-              <Button className="w-full" size="lg" type="submit">
+              <Button className="w-full" disabled={isPlayerDirectoryPending || !playerId} size="lg" type="submit">
                 Finish Setup
               </Button>
             </form>

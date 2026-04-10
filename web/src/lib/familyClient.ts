@@ -1,9 +1,25 @@
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { Player, Parent } from "@/types/domain";
 
 interface FamilyClientResult<T> {
   data?: T;
   error?: string;
+}
+
+interface PlayerRow {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  grad_year: number | null;
+  position: Player["position"] | null;
+  jersey_number: number | null;
+  team_ids: string[] | null;
+  parent_ids: string[] | null;
+  teammate_ids: string[] | null;
+  privacy: Player["privacy"] | null;
+  bio: string | null;
 }
 
 interface UpsertPlayerPayload {
@@ -16,6 +32,51 @@ interface UpsertParentPayload {
 
 function supabaseConfigError() {
   return "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY (or VITE_SUPABASE_ANON_KEY).";
+}
+
+function mapPlayerRowToPlayer(row: PlayerRow): Player {
+  return {
+    id: row.id,
+    role: "player",
+    firstName: row.first_name?.trim() || "New",
+    lastName: row.last_name?.trim() || "Player",
+    email: row.email?.trim().toLowerCase() || "",
+    avatarUrl: row.avatar_url?.trim() || "",
+    gradYear: row.grad_year ?? new Date().getFullYear() + 2,
+    position: row.position ?? "Central Midfielder",
+    jerseyNumber: row.jersey_number ?? 0,
+    teamIds: row.team_ids ?? [],
+    parentIds: row.parent_ids ?? [],
+    teammateIds: row.teammate_ids ?? [],
+    privacy: row.privacy ?? "public",
+    bio: row.bio ?? ""
+  };
+}
+
+export async function fetchPlayersFromSupabase(): Promise<FamilyClientResult<Player[]>> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      data: []
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("players")
+    .select(
+      "id, first_name, last_name, email, avatar_url, grad_year, position, jersey_number, team_ids, parent_ids, teammate_ids, privacy, bio"
+    )
+    .order("last_name", { ascending: true })
+    .order("first_name", { ascending: true });
+
+  if (error) {
+    return {
+      error: error.message
+    };
+  }
+
+  return {
+    data: (data as PlayerRow[]).map(mapPlayerRowToPlayer)
+  };
 }
 
 export async function upsertPlayerInSupabase(

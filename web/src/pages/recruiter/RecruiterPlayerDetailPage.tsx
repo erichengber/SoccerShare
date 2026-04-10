@@ -27,7 +27,10 @@ export function RecruiterPlayerDetailPage() {
 
   return (
     <div>
-      <PageHeader description="Recruiter view for a public player profile." title="Player Profile" />
+      <PageHeader
+        description="Recruiter view of a public player profile."
+        title={`${player.firstName} ${player.lastName}`}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
         <PlayerCard
@@ -36,10 +39,11 @@ export function RecruiterPlayerDetailPage() {
           onAction={() => toggleFavoritePlayer(player.id)}
           player={player}
           teamNames={player.teamIds.map((teamId) => getTeamName(data, teamId))}
+          variant="profile"
         />
 
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Public Clips</h2>
+          <h2 className="mb-3 text-lg font-semibold">Clips</h2>
           {clips.length ? (
             <div className="grid gap-4 md:grid-cols-2">
               {clips.map((clip) => (

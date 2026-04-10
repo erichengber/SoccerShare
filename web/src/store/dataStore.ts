@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { mockData } from "@/data/mockData";
 import { fetchClipsFromSupabase, upsertClipInSupabase } from "@/lib/clipClient";
-import { upsertParentInSupabase, upsertPlayerInSupabase } from "@/lib/familyClient";
+import { fetchPlayersFromSupabase, upsertParentInSupabase, upsertPlayerInSupabase } from "@/lib/familyClient";
 import { upsertRecruiterInSupabase } from "@/lib/recruiterClient";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { createCoachTeamInSupabase, fetchCoachTeamFromSupabase } from "@/lib/teamClient";
@@ -49,6 +49,10 @@ type AsyncActionResult = Promise<ActionResult>;
 
 interface DataState {
   data: AppData;
+  playerDirectory: Player[];
+  playerDirectoryInitialized: boolean;
+  playerDirectoryLoading: boolean;
+  playerDirectorySyncError?: string;
   clipsInitialized: boolean;
   clipsLoading: boolean;
   clipsSyncError?: string;
@@ -58,6 +62,7 @@ interface DataState {
   scheduleInitialized: boolean;
   scheduleLoading: boolean;
   scheduleSyncError?: string;
+  loadPlayerDirectory: () => Promise<void>;
   loadClips: () => Promise<void>;
   loadTeamInvites: () => Promise<void>;
   loadSchedule: () => Promise<void>;
@@ -88,6 +93,24 @@ interface DataState {
 function addTeamToPlayer(player: Player, teamId: string): Player {
   if (player.teamIds.includes(teamId)) return player;
   return { ...player, teamIds: [...player.teamIds, teamId] };
+}
+
+function sortPlayersByName(players: Player[]) {
+  return [...players].sort((left, right) => {
+    const lastNameCompare = left.lastName.localeCompare(right.lastName);
+    if (lastNameCompare !== 0) return lastNameCompare;
+    return left.firstName.localeCompare(right.firstName);
+  });
+}
+
+function upsertPlayerCollection(players: Player[], player: Player) {
+  const existingPlayerIndex = players.findIndex((entry) => entry.id === player.id);
+  const nextPlayers =
+    existingPlayerIndex === -1
+      ? [player, ...players]
+      : players.map((entry) => (entry.id === player.id ? player : entry));
+
+  return sortPlayersByName(nextPlayers);
 }
 
 function upsertTeam(teams: Team[], team: Team): Team[] {
@@ -237,6 +260,10 @@ function hydrateTournamentGameIds(tournaments: Tournament[], games: Game[]) {
 
 export const useDataStore = create<DataState>((set, get) => ({
   data: mockData,
+  playerDirectory: sortPlayersByName(mockData.players),
+  playerDirectoryInitialized: false,
+  playerDirectoryLoading: false,
+  playerDirectorySyncError: undefined,
   clipsInitialized: false,
   clipsLoading: false,
   clipsSyncError: undefined,
@@ -246,6 +273,44 @@ export const useDataStore = create<DataState>((set, get) => ({
   scheduleInitialized: false,
   scheduleLoading: false,
   scheduleSyncError: undefined,
+  loadPlayerDirectory: async () => {
+    const { playerDirectoryInitialized, playerDirectoryLoading } = get();
+    if (playerDirectoryInitialized || playerDirectoryLoading) {
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      set((state) => ({
+        playerDirectory: sortPlayersByName(state.data.players),
+        playerDirectoryInitialized: true,
+        playerDirectoryLoading: false,
+        playerDirectorySyncError: undefined
+      }));
+      return;
+    }
+
+    set({
+      playerDirectoryLoading: true
+    });
+
+    const result = await fetchPlayersFromSupabase();
+    if (!result.data) {
+      set((state) => ({
+        playerDirectory: sortPlayersByName(state.data.players),
+        playerDirectoryInitialized: true,
+        playerDirectoryLoading: false,
+        playerDirectorySyncError: result.error ?? "Unable to sync players from Supabase."
+      }));
+      return;
+    }
+
+    set({
+      playerDirectory: sortPlayersByName(result.data),
+      playerDirectoryInitialized: true,
+      playerDirectoryLoading: false,
+      playerDirectorySyncError: undefined
+    });
+  },
   loadClips: async () => {
     const { clipsInitialized, clipsLoading } = get();
     if (clipsInitialized || clipsLoading) {
@@ -392,6 +457,10 @@ export const useDataStore = create<DataState>((set, get) => ({
         };
 
         return {
+          playerDirectory:
+            !isSupabaseConfigured && state.playerDirectoryInitialized
+              ? upsertPlayerCollection(state.playerDirectory, player)
+              : state.playerDirectory,
           data: {
             ...nextData,
             users: [player, ...nextData.users],
@@ -990,11 +1059,15 @@ export const useDataStore = create<DataState>((set, get) => ({
       const players = state.data.players.map((entry) =>
         entry.id === playerId ? { ...entry, privacy } : entry
       );
-      const users = state.data.users.map((entry) =>
-        entry.id === playerId && entry.role === "player" ? { ...entry, privacy } : entry
+      const playerDirectory = state.playerDirectory.map((player) =>
+        player.id === playerId ? { ...player, privacy } : player
+      );
+      const users = state.data.users.map((user) =>
+        user.id === playerId && user.role === "player" ? { ...user, privacy } : user
       );
 
       return {
+        playerDirectory,
         data: {
           ...state.data,
           players,
@@ -1056,6 +1129,12 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
 
     set((state) => {
+      const syncedPlayer = {
+        ...playerForSupabase,
+        teamIds: nextTeamIds,
+        bio,
+        avatarUrl
+      };
       const players = state.data.players.map((entry) =>
         entry.id === input.playerId
           ? {
@@ -1108,6 +1187,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       });
 
       return {
+        playerDirectory: upsertPlayerCollection(state.playerDirectory, syncedPlayer),
         data: {
           ...state.data,
           players,
@@ -1241,13 +1321,15 @@ export const useDataStore = create<DataState>((set, get) => ({
     return { success: true };
   },
   completeParentOnboarding: async (input) => {
-    const { data } = get();
+    const { data, playerDirectory } = get();
     const parent = data.parents.find((entry) => entry.id === input.parentId);
     if (!parent) {
       return { success: false, error: "Parent not found." };
     }
 
-    const player = data.players.find((entry) => entry.id === input.playerId);
+    const player =
+      data.players.find((entry) => entry.id === input.playerId) ??
+      playerDirectory.find((entry) => entry.id === input.playerId);
     if (!player) {
       return { success: false, error: "Selected player was not found." };
     }
@@ -1297,52 +1379,59 @@ export const useDataStore = create<DataState>((set, get) => ({
       };
     }
 
-    set((state) => ({
-      data: {
-        ...state.data,
-        parents: state.data.parents.map((entry) =>
-          entry.id === input.parentId
-            ? {
-                ...entry,
-                firstName: parentForSupabase.firstName,
-                lastName: parentForSupabase.lastName,
-                email: parentForSupabase.email,
-                avatarUrl,
-                playerIds: nextPlayerIds
-              }
-            : entry
-        ),
-        players: state.data.players.map((entry) =>
-          entry.id === input.playerId
-            ? {
-                ...entry,
-                parentIds: nextParentIds
-              }
-            : entry
-        ),
-        users: state.data.users.map((entry) => {
-          if (entry.id === input.parentId && entry.role === "parent") {
-            return {
-                ...entry,
+    set((state) => {
+      const syncedPlayer = {
+        ...playerForSupabase,
+        parentIds: nextParentIds
+      };
+      const parents = state.data.parents.map((entry) =>
+        entry.id === input.parentId
+          ? {
+              ...entry,
               firstName: parentForSupabase.firstName,
               lastName: parentForSupabase.lastName,
               email: parentForSupabase.email,
               avatarUrl,
               playerIds: nextPlayerIds
-            };
-          }
+            }
+          : entry
+      );
+      const players = upsertPlayerCollection(state.data.players, syncedPlayer);
+      const users = state.data.users.map((entry) => {
+        if (entry.id === input.parentId && entry.role === "parent") {
+          return {
+            ...entry,
+            firstName: parentForSupabase.firstName,
+            lastName: parentForSupabase.lastName,
+            email: parentForSupabase.email,
+            avatarUrl,
+            playerIds: nextPlayerIds
+          };
+        }
 
-          if (entry.id === input.playerId && entry.role === "player") {
-            return {
-              ...entry,
-              parentIds: nextParentIds
-            };
-          }
+        if (entry.id === input.playerId && entry.role === "player") {
+          return {
+            ...entry,
+            parentIds: nextParentIds
+          };
+        }
 
-          return entry;
-        })
-      }
-    }));
+        return entry;
+      });
+      const nextUsers = users.some((entry) => entry.id === input.playerId && entry.role === "player")
+        ? users
+        : [...users, syncedPlayer];
+
+      return {
+        playerDirectory: upsertPlayerCollection(state.playerDirectory, syncedPlayer),
+        data: {
+          ...state.data,
+          parents,
+          players,
+          users: nextUsers
+        }
+      };
+    });
 
     return { success: true };
   }
