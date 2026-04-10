@@ -28,6 +28,7 @@ import { RecruiterGameDetailPage } from "@/pages/recruiter/RecruiterGameDetailPa
 import { RecruiterPlayerDetailPage } from "@/pages/recruiter/RecruiterPlayerDetailPage";
 import { RecruiterFavoritesPage } from "@/pages/recruiter/RecruiterFavoritesPage";
 import { RecruiterSavedClipsPage } from "@/pages/recruiter/RecruiterSavedClipsPage";
+import { AccountPage } from "@/pages/shared/AccountPage";
 
 export function AppRoutes() {
   return (
@@ -61,6 +62,7 @@ export function AppRoutes() {
           <Route element={<ClipDetailPage />} path="player/clips/:clipId" />
           <Route element={<PlayerSchedulePage />} path="player/schedule" />
           <Route element={<PrivacySettingsPage />} path="player/settings/privacy" />
+          <Route element={<AccountPage />} path="player/account" />
         </Route>
       </Route>
 
@@ -69,6 +71,7 @@ export function AppRoutes() {
           <Route element={<ParentOverviewPage />} path="parent" />
           <Route element={<ParentPlayersPage />} path="parent/players" />
           <Route element={<ParentPlayerDetailPage />} path="parent/players/:playerId" />
+          <Route element={<AccountPage />} path="parent/account" />
         </Route>
       </Route>
 
@@ -78,6 +81,7 @@ export function AppRoutes() {
           <Route element={<CoachRosterPage />} path="coach/roster" />
           <Route element={<CoachPlayerDetailPage />} path="coach/players/:playerId" />
           <Route element={<CoachSchedulePage />} path="coach/schedule" />
+          <Route element={<AccountPage />} path="coach/account" />
         </Route>
       </Route>
 
@@ -89,6 +93,7 @@ export function AppRoutes() {
           <Route element={<RecruiterPlayerDetailPage />} path="recruiter/players/:playerId" />
           <Route element={<RecruiterFavoritesPage />} path="recruiter/favorites" />
           <Route element={<RecruiterSavedClipsPage />} path="recruiter/saved-clips" />
+          <Route element={<AccountPage />} path="recruiter/account" />
         </Route>
       </Route>
 

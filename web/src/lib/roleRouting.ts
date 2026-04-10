@@ -15,6 +15,21 @@ export function getHomePathForRole(role: UserRole) {
   }
 }
 
+export function getAccountPathForRole(role: UserRole) {
+  switch (role) {
+    case "player":
+      return "/player/account";
+    case "parent":
+      return "/parent/account";
+    case "coach":
+      return "/coach/account";
+    case "recruiter":
+      return "/recruiter/account";
+    default:
+      return "/";
+  }
+}
+
 export function getDefaultPathForRole(role: UserRole, userId: string | undefined, data: AppData) {
   if (role === "player" && userId) {
     const player = data.players.find((entry) => entry.id === userId);

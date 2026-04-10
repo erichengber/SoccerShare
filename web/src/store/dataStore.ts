@@ -4,7 +4,11 @@ import { fetchClipsFromSupabase, upsertClipInSupabase } from "@/lib/clipClient";
 import { upsertParentInSupabase, upsertPlayerInSupabase } from "@/lib/familyClient";
 import { upsertRecruiterInSupabase } from "@/lib/recruiterClient";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { createCoachTeamInSupabase, fetchCoachTeamFromSupabase } from "@/lib/teamClient";
+import {
+  createCoachTeamInSupabase,
+  fetchCoachTeamFromSupabase,
+  updateCoachProfileInSupabase
+} from "@/lib/teamClient";
 import {
   createTeamInviteInSupabase,
   fetchTeamInvitesFromSupabase,
@@ -21,6 +25,7 @@ import type {
   Clip,
   ClipUploadInput,
   ClipUpdateInput,
+  CoachProfileUpdateInput,
   CoachOnboardingInput,
   Coach,
   CoachGameInput,
@@ -28,10 +33,13 @@ import type {
   CreateCoachTeamInput,
   Game,
   Parent,
+  ParentProfileUpdateInput,
   ParentOnboardingInput,
   Player,
+  PlayerProfileUpdateInput,
   PlayerOnboardingInput,
   PlayerPrivacy,
+  RecruiterProfileUpdateInput,
   RecruiterOnboardingInput,
   Team,
   TeamInvite,
@@ -83,6 +91,10 @@ interface DataState {
   completeCoachOnboarding: (input: CoachOnboardingInput) => AsyncActionResult;
   completeRecruiterOnboarding: (input: RecruiterOnboardingInput) => AsyncActionResult;
   completeParentOnboarding: (input: ParentOnboardingInput) => AsyncActionResult;
+  updatePlayerProfile: (input: PlayerProfileUpdateInput) => AsyncActionResult;
+  updateParentProfile: (input: ParentProfileUpdateInput) => AsyncActionResult;
+  updateCoachProfile: (input: CoachProfileUpdateInput) => AsyncActionResult;
+  updateRecruiterProfile: (input: RecruiterProfileUpdateInput) => AsyncActionResult;
 }
 
 function addTeamToPlayer(player: Player, teamId: string): Player {
@@ -1341,6 +1353,367 @@ export const useDataStore = create<DataState>((set, get) => ({
 
           return entry;
         })
+      }
+    }));
+
+    return { success: true };
+  },
+  updatePlayerProfile: async (input) => {
+    const { data } = get();
+    const player = data.players.find((entry) => entry.id === input.playerId);
+    if (!player) {
+      return { success: false, error: "Player not found." };
+    }
+
+    const team = data.teams.find((entry) => entry.id === input.teamId);
+    if (!team) {
+      return { success: false, error: "Selected team was not found." };
+    }
+
+    if (!Number.isInteger(input.jerseyNumber) || input.jerseyNumber < 0 || input.jerseyNumber > 99) {
+      return { success: false, error: "Jersey number must be between 0 and 99." };
+    }
+
+    const bio = input.bio.trim();
+    if (!bio) {
+      return { success: false, error: "Profile summary is required." };
+    }
+
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    const nextTeamIds = [input.teamId];
+    const playerForSupabase: Player = {
+      ...player,
+      position: input.position,
+      jerseyNumber: input.jerseyNumber,
+      teamIds: nextTeamIds,
+      bio,
+      avatarUrl
+    };
+
+    const upsertResult = await upsertPlayerInSupabase({
+      player: playerForSupabase
+    });
+
+    if (!upsertResult.data) {
+      return {
+        success: false,
+        error: upsertResult.error ?? "Unable to save player profile."
+      };
+    }
+
+    set((state) => {
+      const players = state.data.players.map((entry) =>
+        entry.id === input.playerId
+          ? {
+              ...entry,
+              position: input.position,
+              jerseyNumber: input.jerseyNumber,
+              teamIds: nextTeamIds,
+              bio,
+              avatarUrl
+            }
+          : entry
+      );
+      const users = state.data.users.map((entry) =>
+        entry.id === input.playerId && entry.role === "player"
+          ? {
+              ...entry,
+              position: input.position,
+              jerseyNumber: input.jerseyNumber,
+              teamIds: nextTeamIds,
+              bio,
+              avatarUrl
+            }
+          : entry
+      );
+      const teams = state.data.teams.map((entry) => {
+        const shouldContainPlayer = entry.id === input.teamId;
+        const currentlyContainsPlayer = entry.playerIds.includes(input.playerId);
+
+        if (shouldContainPlayer && !currentlyContainsPlayer) {
+          return {
+            ...entry,
+            playerIds: [...entry.playerIds, input.playerId]
+          };
+        }
+
+        if (!shouldContainPlayer && currentlyContainsPlayer) {
+          return {
+            ...entry,
+            playerIds: entry.playerIds.filter((id) => id !== input.playerId)
+          };
+        }
+
+        return entry;
+      });
+
+      return {
+        data: {
+          ...state.data,
+          players,
+          users,
+          teams
+        }
+      };
+    });
+
+    return { success: true };
+  },
+  updateParentProfile: async (input) => {
+    const { data } = get();
+    const parent = data.parents.find((entry) => entry.id === input.parentId);
+    if (!parent) {
+      return { success: false, error: "Parent not found." };
+    }
+
+    const player = data.players.find((entry) => entry.id === input.playerId);
+    if (!player) {
+      return { success: false, error: "Selected player was not found." };
+    }
+
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    const previousPlayerIds = parent.playerIds;
+    const nextPlayerIds = [input.playerId];
+    const affectedPlayers = data.players.filter(
+      (entry) => previousPlayerIds.includes(entry.id) || entry.id === input.playerId
+    );
+    const updatedPlayers = affectedPlayers.map((entry) => {
+      if (entry.id === input.playerId) {
+        return entry.parentIds.includes(input.parentId)
+          ? entry
+          : {
+              ...entry,
+              parentIds: [...entry.parentIds, input.parentId]
+            };
+      }
+
+      return {
+        ...entry,
+        parentIds: entry.parentIds.filter((id) => id !== input.parentId)
+      };
+    });
+
+    const parentForSupabase: Parent = {
+      ...parent,
+      avatarUrl,
+      playerIds: nextPlayerIds
+    };
+
+    const persistenceResults = await Promise.all([
+      upsertParentInSupabase({ parent: parentForSupabase }),
+      ...updatedPlayers.map((updatedPlayer) => upsertPlayerInSupabase({ player: updatedPlayer }))
+    ]);
+
+    const [parentUpsertResult, ...playerUpsertResults] = persistenceResults;
+
+    if (!parentUpsertResult.data) {
+      return {
+        success: false,
+        error: parentUpsertResult.error ?? "Unable to save parent profile."
+      };
+    }
+
+    const failedPlayerUpdate = playerUpsertResults.find((result) => !result.data);
+    if (failedPlayerUpdate) {
+      return {
+        success: false,
+        error: failedPlayerUpdate.error ?? "Unable to update linked player."
+      };
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        parents: state.data.parents.map((entry) =>
+          entry.id === input.parentId
+            ? {
+                ...entry,
+                avatarUrl,
+                playerIds: nextPlayerIds
+              }
+            : entry
+        ),
+        players: state.data.players.map((entry) => {
+          const updatedPlayer = updatedPlayers.find((candidate) => candidate.id === entry.id);
+          return updatedPlayer ?? entry;
+        }),
+        users: state.data.users.map((entry) => {
+          if (entry.id === input.parentId && entry.role === "parent") {
+            return {
+              ...entry,
+              avatarUrl,
+              playerIds: nextPlayerIds
+            };
+          }
+
+          if (entry.role === "player") {
+            const updatedPlayer = updatedPlayers.find((candidate) => candidate.id === entry.id);
+            return updatedPlayer ?? entry;
+          }
+
+          return entry;
+        })
+      }
+    }));
+
+    return { success: true };
+  },
+  updateCoachProfile: async (input) => {
+    const { data } = get();
+    const coach = data.coaches.find((entry) => entry.id === input.coachId);
+    if (!coach) {
+      return { success: false, error: "Coach not found." };
+    }
+
+    if (!coach.teamId) {
+      return { success: false, error: "Coach team not found." };
+    }
+
+    const team = data.teams.find((entry) => entry.id === coach.teamId);
+    if (!team) {
+      return { success: false, error: "Coach team not found." };
+    }
+
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    const teamName = input.teamName.trim();
+    if (!teamName) {
+      return { success: false, error: "Team name is required." };
+    }
+
+    const schoolId = input.schoolId?.trim() || undefined;
+    if (schoolId && !data.schools.some((school) => school.id === schoolId)) {
+      return { success: false, error: "Selected school is invalid." };
+    }
+
+    const updateResult = await updateCoachProfileInSupabase({
+      coachId: input.coachId,
+      teamId: team.id,
+      name: teamName,
+      level: input.level,
+      schoolId,
+      firstName: coach.firstName,
+      lastName: coach.lastName,
+      email: coach.email,
+      avatarUrl
+    });
+
+    if (!updateResult.data?.team) {
+      return {
+        success: false,
+        error: updateResult.error ?? "Unable to update coach profile."
+      };
+    }
+    const updatedTeam = updateResult.data.team;
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        coaches: state.data.coaches.map((entry) =>
+          entry.id === input.coachId
+            ? {
+                ...entry,
+                avatarUrl,
+                schoolId
+              }
+            : entry
+        ),
+        users: state.data.users.map((entry) =>
+          entry.id === input.coachId && entry.role === "coach"
+            ? {
+                ...entry,
+                avatarUrl,
+                schoolId
+              }
+            : entry
+        ),
+        teams: upsertTeam(
+          state.data.teams,
+          updatedTeam.coachIds.includes(input.coachId)
+            ? updatedTeam
+            : {
+                ...updatedTeam,
+                coachIds: [...updatedTeam.coachIds, input.coachId]
+              }
+        )
+      }
+    }));
+
+    return { success: true };
+  },
+  updateRecruiterProfile: async (input) => {
+    const { data } = get();
+    const recruiter = data.recruiters.find((entry) => entry.id === input.recruiterId);
+    if (!recruiter) {
+      return { success: false, error: "Recruiter not found." };
+    }
+
+    const organization = input.organization.trim();
+    if (!organization) {
+      return { success: false, error: "Organization is required." };
+    }
+
+    const region = input.region.trim();
+    if (!region) {
+      return { success: false, error: "Region is required." };
+    }
+
+    const avatarUrl = input.avatarUrl.trim();
+    if (!avatarUrl) {
+      return { success: false, error: "Profile picture is required." };
+    }
+
+    const upsertResult = await upsertRecruiterInSupabase({
+      recruiterId: input.recruiterId,
+      firstName: recruiter.firstName,
+      lastName: recruiter.lastName,
+      email: recruiter.email,
+      avatarUrl,
+      organization,
+      region
+    });
+
+    if (!upsertResult.data) {
+      return {
+        success: false,
+        error: upsertResult.error ?? "Unable to save recruiter profile."
+      };
+    }
+
+    set((state) => ({
+      data: {
+        ...state.data,
+        recruiters: state.data.recruiters.map((entry) =>
+          entry.id === input.recruiterId
+            ? {
+                ...entry,
+                organization,
+                region,
+                avatarUrl
+              }
+            : entry
+        ),
+        users: state.data.users.map((entry) =>
+          entry.id === input.recruiterId && entry.role === "recruiter"
+            ? {
+                ...entry,
+                organization,
+                region,
+                avatarUrl
+              }
+            : entry
+        )
       }
     }));
 

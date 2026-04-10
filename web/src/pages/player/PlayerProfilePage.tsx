@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
+import { getAccountPathForRole } from "@/lib/roleRouting";
 import { getSchoolName, getTeamName } from "@/lib/selectors";
 
 export function PlayerProfilePage() {
@@ -17,6 +18,7 @@ export function PlayerProfilePage() {
 
   const teammateList = data.players.filter((entry) => player.teammateIds.includes(entry.id));
   const teams = data.teams.filter((team) => player.teamIds.includes(team.id));
+  const accountPath = getAccountPathForRole("player");
 
   return (
     <div>
@@ -28,6 +30,7 @@ export function PlayerProfilePage() {
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
         <section className="space-y-6">
           <PlayerCard
+            editTo={accountPath}
             player={player}
             teamNames={player.teamIds.map((teamId) => getTeamName(data, teamId))}
           />

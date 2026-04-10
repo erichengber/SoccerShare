@@ -243,6 +243,36 @@ export interface ParentOnboardingInput {
   email?: string;
 }
 
+export interface PlayerProfileUpdateInput {
+  playerId: string;
+  position: PlayerPosition;
+  jerseyNumber: number;
+  teamId: string;
+  bio: string;
+  avatarUrl: string;
+}
+
+export interface ParentProfileUpdateInput {
+  parentId: string;
+  avatarUrl: string;
+  playerId: string;
+}
+
+export interface CoachProfileUpdateInput {
+  coachId: string;
+  avatarUrl: string;
+  teamName: string;
+  level: TeamLevel;
+  schoolId?: string;
+}
+
+export interface RecruiterProfileUpdateInput {
+  recruiterId: string;
+  avatarUrl: string;
+  organization: string;
+  region: string;
+}
+
 export interface CoachTournamentInput {
   name: string;
   location: string;

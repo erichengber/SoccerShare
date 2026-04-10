@@ -1,7 +1,8 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { CircleUserRound, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { getAccountPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ export function AppShell() {
 
   const links = navByRole[selectedRole];
   const user = data.users.find((entry) => entry.id === selectedUserId);
+  const accountPath = getAccountPathForRole(selectedRole);
 
   return (
     <div className="min-h-screen">
@@ -47,6 +49,11 @@ export function AppShell() {
             SoccerShare
           </Link>
           <div className="flex items-center gap-3">
+            <Button asChild size="icon" variant="ghost">
+              <Link aria-label="Open account settings" to={accountPath}>
+                <CircleUserRound className="h-5 w-5" />
+              </Link>
+            </Button>
             <div className="hidden text-right text-sm md:block">
               <p className="font-medium">
                 {user?.firstName} {user?.lastName}
