@@ -1,0 +1,11 @@
+Time Dedicated to the Project
+- This week I committed 4 hours to the project. I focused on persisting parent-managed player privacy controls so visibility changes are saved through Supabase instead of only updating locally in the browser.
+
+Contribution to the Project Development Process
+- I contributed by connecting the parent privacy workflow to our existing player persistence path, updating the parent player detail page to handle async privacy updates cleanly, and documenting that privacy changes now persist through the backend. This keeps recruiter visibility rules consistent after refreshes and across sessions.
+
+Demonstration of Applied Knowledge
+- I demonstrated my knowledge by reusing our existing Supabase player upsert client instead of creating duplicate persistence logic, while still preserving local fallback behavior when Supabase is not configured. I also made sure the state update remains synchronized between the player collection and the role-based user view so privacy changes propagate consistently throughout the app.
+
+Reflection and Lessons Learned
+- This week reinforced that even small user-facing controls like privacy toggles need full data-layer support to be reliable. I learned that reusing an existing persistence path can simplify implementation, reduce duplicated logic, and make behavior more consistent across the application.

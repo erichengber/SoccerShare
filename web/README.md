@@ -73,6 +73,7 @@ VITE_SUPABASE_ANON_KEY=your_anon_or_publishable_key
 - Clip detail edits also upsert into `public.clips`.
 - Team invites now load from and persist to `public.team_invites`.
 - Coach-created games and tournaments now load from and persist to `public.games` and `public.tournaments`.
+- Parent privacy changes now persist through the `public.players` table.
 - If Supabase env vars are missing, the app falls back to in-memory clip behavior for local demo use.
 - Auth/session is fully handled through `src/store/authStore.ts` and `src/lib/supabaseClient.ts`.
 - Role + demo-user mapping is persisted in Supabase user metadata (`selected_role`, `selected_user_id`).
