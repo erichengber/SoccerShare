@@ -35,18 +35,22 @@ export function ParentPlayerDetailPage() {
     <div>
       <PageHeader
         action={<Button onClick={() => openUploadModal(player.id)}>Upload Clip</Button>}
-        description="Parents can upload highlights for linked players regardless of privacy setting."
+        description="Profile, visibility, and clips for your linked player."
         title={`${player.firstName} ${player.lastName}`}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-        <PlayerCard player={player} teamNames={player.teamIds.map((teamId) => getTeamName(data, teamId))} />
+        <PlayerCard
+          player={player}
+          teamNames={player.teamIds.map((teamId) => getTeamName(data, teamId))}
+          variant="profile"
+        />
 
         <section>
           <Card className="mb-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                Player Visibility
+                Profile Visibility
                 <Badge>{isPublic ? "Public" : "Private"}</Badge>
               </CardTitle>
               <CardDescription>Parents control who can discover this player profile.</CardDescription>

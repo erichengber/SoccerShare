@@ -35,13 +35,20 @@ export function CoachPlayerDetailPage() {
 
   return (
     <div>
-      <PageHeader description="Coach access includes private players linked to your team." title="Player Profile" />
+      <PageHeader
+        description="Coach view of a rostered player profile, including private visibility."
+        title={`${player.firstName} ${player.lastName}`}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-        <PlayerCard player={player} teamNames={player.teamIds.map((teamId) => getTeamName(data, teamId))} />
+        <PlayerCard
+          player={player}
+          teamNames={player.teamIds.map((teamId) => getTeamName(data, teamId))}
+          variant="profile"
+        />
 
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Player Clips</h2>
+          <h2 className="mb-3 text-lg font-semibold">Clips</h2>
           {clips.length ? (
             <div className="grid gap-4 md:grid-cols-2">
               {clips.map((clip) => (

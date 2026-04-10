@@ -21,8 +21,8 @@ export function PlayerProfilePage() {
   return (
     <div>
       <PageHeader
-        description="Public/private profile details and your linked teammates."
-        title="Player Profile"
+        description="Your profile details, active teams, and linked teammates."
+        title={`${player.firstName} ${player.lastName}`}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
@@ -30,25 +30,30 @@ export function PlayerProfilePage() {
           <PlayerCard
             player={player}
             teamNames={player.teamIds.map((teamId) => getTeamName(data, teamId))}
+            variant="profile"
           />
 
           <div>
-            <h2 className="mb-3 text-lg font-semibold">Teams</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {teams.map((team) => (
-                <TeamCard
-                  key={team.id}
-                  playerCount={team.playerIds.length}
-                  schoolName={getSchoolName(data, team.schoolId)}
-                  team={team}
-                />
-              ))}
-            </div>
+            <h2 className="mb-3 text-lg font-semibold">Active Teams</h2>
+            {teams.length ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {teams.map((team) => (
+                  <TeamCard
+                    key={team.id}
+                    playerCount={team.playerIds.length}
+                    schoolName={getSchoolName(data, team.schoolId)}
+                    team={team}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState description="This profile is not linked to any teams yet." title="No teams" />
+            )}
           </div>
         </section>
 
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Teammates</h2>
+          <h2 className="mb-3 text-lg font-semibold">Linked Teammates</h2>
           {teammateList.length ? (
             <div className="space-y-3">
               {teammateList.map((teammate) => (

@@ -8,6 +8,7 @@ export default function App() {
   const isInitialized = useAuthStore((state) => state.isInitialized);
   const user = useAuthStore((state) => state.user);
   const selectedRole = useAuthStore((state) => state.selectedRole);
+  const loadPlayerDirectory = useDataStore((state) => state.loadPlayerDirectory);
   const loadClips = useDataStore((state) => state.loadClips);
   const loadTeamInvites = useDataStore((state) => state.loadTeamInvites);
   const loadSchedule = useDataStore((state) => state.loadSchedule);
@@ -16,6 +17,10 @@ export default function App() {
   useEffect(() => {
     void initializeAuth();
   }, [initializeAuth]);
+
+  useEffect(() => {
+    void loadPlayerDirectory();
+  }, [loadPlayerDirectory]);
 
   useEffect(() => {
     void loadClips();
