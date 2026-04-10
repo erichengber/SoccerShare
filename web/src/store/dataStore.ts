@@ -83,7 +83,7 @@ interface DataState {
   addCoachTournament: (coachId: string, input: CoachTournamentInput) => AsyncActionResult;
   uploadClip: (input: ClipUploadInput) => AsyncActionResult;
   updateClip: (input: ClipUpdateInput) => AsyncActionResult;
-  setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => void;
+  setPlayerPrivacy: (playerId: string, privacy: PlayerPrivacy) => AsyncActionResult;
   completePlayerOnboarding: (input: PlayerOnboardingInput) => AsyncActionResult;
   completeCoachOnboarding: (input: CoachOnboardingInput) => AsyncActionResult;
   completeRecruiterOnboarding: (input: RecruiterOnboardingInput) => AsyncActionResult;
@@ -1027,10 +1027,37 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     return { success: true };
   },
-  setPlayerPrivacy: (playerId, privacy) => {
+  setPlayerPrivacy: async (playerId, privacy) => {
+    const { data } = get();
+    const player = data.players.find((entry) => entry.id === playerId);
+    if (!player) {
+      return {
+        success: false,
+        error: "Player not found."
+      };
+    }
+
+    const nextPlayer: Player = {
+      ...player,
+      privacy
+    };
+
+    if (isSupabaseConfigured) {
+      const upsertResult = await upsertPlayerInSupabase({
+        player: nextPlayer
+      });
+
+      if (!upsertResult.data) {
+        return {
+          success: false,
+          error: upsertResult.error ?? "Unable to save player privacy."
+        };
+      }
+    }
+
     set((state) => {
-      const players = state.data.players.map((player) =>
-        player.id === playerId ? { ...player, privacy } : player
+      const players = state.data.players.map((entry) =>
+        entry.id === playerId ? { ...entry, privacy } : entry
       );
       const playerDirectory = state.playerDirectory.map((player) =>
         player.id === playerId ? { ...player, privacy } : player
@@ -1048,6 +1075,8 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
       };
     });
+
+    return { success: true };
   },
   completePlayerOnboarding: async (input) => {
     const { data } = get();

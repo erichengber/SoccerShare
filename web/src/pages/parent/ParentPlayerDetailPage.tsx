@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { PlayerCard } from "@/components/cards/PlayerCard";
 import { ClipCard } from "@/components/cards/ClipCard";
@@ -30,6 +31,7 @@ export function ParentPlayerDetailPage() {
 
   const clips = data.clips.filter((clip) => clip.playerId === player.id);
   const isPublic = player.privacy === "public";
+  const [privacyMessage, setPrivacyMessage] = useState<string>();
 
   return (
     <div>
@@ -56,17 +58,32 @@ export function ParentPlayerDetailPage() {
               <CardDescription>Parents control who can discover this player profile.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
-              <Button disabled={isPublic} onClick={() => setPlayerPrivacy(player.id, "public")} size="sm">
+              <Button
+                disabled={isPublic}
+                onClick={async () => {
+                  const result = await setPlayerPrivacy(player.id, "public");
+                  setPrivacyMessage(
+                    result.success ? "Player profile is now public." : result.error ?? "Unable to update privacy."
+                  );
+                }}
+                size="sm"
+              >
                 Set Public
               </Button>
               <Button
                 disabled={!isPublic}
-                onClick={() => setPlayerPrivacy(player.id, "private")}
+                onClick={async () => {
+                  const result = await setPlayerPrivacy(player.id, "private");
+                  setPrivacyMessage(
+                    result.success ? "Player profile is now private." : result.error ?? "Unable to update privacy."
+                  );
+                }}
                 size="sm"
                 variant="outline"
               >
                 Set Private
               </Button>
+              {privacyMessage ? <p className="w-full text-sm text-muted-foreground">{privacyMessage}</p> : null}
             </CardContent>
           </Card>
 
