@@ -1,0 +1,105 @@
+Project Summary
+Report date
+Team Name:
+Prepared for:
+4/3/2026
+SoccerShare
+Week 12
+
+Status Summary/Completed Activities
+Completed Sprint 6
+Wrap up Allowing to fill in data to create personal user accounts - Max
+Work on persisting coaching schedules - Jayden
+Create onboarding pages for recruiters - Eric
+Task
+% Done
+Due date
+Person Responsible
+Notes
+Completed Sprint 6
+100%
+4/3/2026
+All
+
+
+Wrap up Allowing to fill in data to create personal user accounts
+100%
+4/3/2026
+Max
+
+
+Work on persisting coaching schedules
+100%
+4/3/2026
+Jayden
+
+
+Create onboarding pages for recruiters 
+100%
+4/3/2026
+Eric
+
+
+
+Activities Planned for Next Week 
+Task
+Person Responsible
+
+
+
+
+Notes
+Start Sprint 7
+All
+
+
+
+
+
+
+Profile Consistency
+Max
+
+
+
+
+
+
+Persist Parent Privacy Controls
+Jayden
+
+
+
+
+
+
+Add profile editing after onboarding
+Eric
+
+
+
+
+
+
+
+Risk and issue history
+Issue
+Mitigation Plan
+
+
+N/A
+N/A
+
+
+
+Did your team meet with your faculty advisor this week? Yes/No. 
+Next Scheduled Meeting with your advisor_4/8__
+*At the end of each week email form to advisor and turn in on Canvas
+
+
+Github Insights
+
+
+
+AI Prompts
+None this week
