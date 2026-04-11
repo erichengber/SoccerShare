@@ -1,0 +1,30 @@
+SoccerShare
+Eric Hengber
+Week 13 Individual Report
+
+Time Dedicated to the Project:
+The total hours or days you allocated for different phases (planning, research, implementation, testing)
+3 hours dedicated this week for planning
+How you managed your schedule to ensure progress
+Stayed organized and prioritized work to ensure everything got done
+The consistency and commitment shown in working on the project
+Provided updates in our group chat on completed work and what else needed to be done
+Made sure all tasks were completed by due date including reports and project proposal
+
+Contribution to the Project Development Process:
+Built a shared account editing flow that lets users update their profile after onboarding
+
+Demonstration of Applied Knowledge:
+This week I applied my knowledge of frontend development, component reuse, routing, state management, and backend integration by extending the app beyond onboarding into profile maintenance. I created a shared account page that works across all user roles, connected it to the existing structure, and added role-specific update behavior so player, parent, coach, and recruiter profile changes could persist correctly. I also updated the navigation experience by adding an account icon in the app and a direct edit action from the player profile card. 
+
+Reflection and Lessons Learned:
+This week reinforced how important it is to design features as part of a complete user
+lifecycle instead of only focusing on first-time setup. After onboarding is finished, users
+still need an intuitive way to maintain and correct their information, so adding profile
+editing made the application feel more complete and realistic. I also learned more about
+the value of shared components and centralized state logic, since building one account
+editing experience for multiple roles was much more manageable when the update logic
+was organized in the store. Overall, this experience showed the importance of
+consistency in navigation, reusable UI patterns, and making sure frontend editing flows
+stay aligned with backend data persistence.
+

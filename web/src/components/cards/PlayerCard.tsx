@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ interface PlayerCardProps {
   player: Player;
   teamNames: string[];
   linkTo?: string;
+  editTo?: string;
   actionLabel?: string;
   onAction?: () => void;
   actionVariant?: "default" | "secondary" | "outline" | "ghost" | "destructive";
@@ -20,6 +22,7 @@ export function PlayerCard({
   player,
   teamNames,
   linkTo,
+  editTo,
   actionLabel,
   onAction,
   actionVariant = "outline",
@@ -117,9 +120,18 @@ export function PlayerCard({
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{profileMeta}</p>
           </div>
-          <Badge variant={player.privacy === "public" ? "default" : "secondary"}>
-            {capitalize(player.privacy)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {editTo ? (
+              <Button asChild size="icon" variant="ghost">
+                <Link aria-label="Edit profile" to={editTo}>
+                  <Pencil className="h-4 w-4" />
+                </Link>
+              </Button>
+            ) : null}
+            <Badge variant={player.privacy === "public" ? "default" : "secondary"}>
+              {capitalize(player.privacy)}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

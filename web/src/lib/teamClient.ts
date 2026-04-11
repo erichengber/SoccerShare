@@ -32,6 +32,18 @@ interface CreateCoachTeamPayload {
   avatarUrl: string;
 }
 
+interface UpdateCoachProfilePayload {
+  coachId: string;
+  teamId: string;
+  name: string;
+  level: TeamLevel;
+  schoolId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string;
+}
+
 interface CoachTeamSnapshot {
   team?: Team;
   teamId?: string;
@@ -201,6 +213,76 @@ export async function fetchCoachTeamFromSupabase(
       team: teamRow ? mapTeamRowToTeam(teamRow as TeamRow) : undefined,
       teamId,
       schoolId: normalizedCoachRow.school_id ?? undefined
+    }
+  };
+}
+
+export async function updateCoachProfileInSupabase(
+  payload: UpdateCoachProfilePayload
+): Promise<TeamClientResult<{ team: Team }>> {
+  if (!supabase) {
+    return {
+      error:
+        "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY (or VITE_SUPABASE_ANON_KEY)."
+    };
+  }
+
+  const teamName = payload.name.trim();
+  const schoolId = payload.schoolId?.trim() || null;
+  const firstName = payload.firstName.trim();
+  const lastName = payload.lastName.trim();
+  const email = payload.email.trim().toLowerCase();
+  const avatarUrl = payload.avatarUrl.trim();
+
+  if (!teamName) {
+    return { error: "Team name is required." };
+  }
+
+  if (!firstName || !lastName || !email || !avatarUrl) {
+    return {
+      error: "Coach profile is missing required fields."
+    };
+  }
+
+  const { data: updatedTeamRow, error: updateTeamError } = await supabase
+    .from("teams")
+    .update({
+      name: teamName,
+      level: payload.level,
+      school_id: schoolId
+    })
+    .eq("id", payload.teamId)
+    .select("id, name, level, school_id, coach_ids, player_ids")
+    .single();
+
+  if (updateTeamError || !updatedTeamRow) {
+    return {
+      error: updateTeamError?.message ?? "Unable to update coach team in Supabase."
+    };
+  }
+
+  const { error: updateCoachError } = await supabase
+    .from("coaches")
+    .update({
+      role: "coach",
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      avatar_url: avatarUrl,
+      team_id: payload.teamId,
+      school_id: schoolId
+    })
+    .eq("id", payload.coachId);
+
+  if (updateCoachError) {
+    return {
+      error: updateCoachError.message
+    };
+  }
+
+  return {
+    data: {
+      team: mapTeamRowToTeam(updatedTeamRow as TeamRow)
     }
   };
 }
