@@ -25,7 +25,7 @@ export function ClipCard({
   onToggleSave
 }: ClipCardProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="flex h-full flex-col overflow-hidden">
       {clip.posterUrl ? (
         <img alt={clip.title} className="h-44 w-full object-cover" src={clip.posterUrl} />
       ) : (
@@ -42,11 +42,13 @@ export function ClipCard({
           <Badge variant="outline">{clip.durationSec}s</Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-1 flex-col gap-3">
         <TagBadgeList tags={clip.tags} />
-        <p className="line-clamp-2 text-sm text-muted-foreground">{clip.notes}</p>
-        <p className="text-xs text-muted-foreground">Added {formatDate(clip.createdAt)}</p>
-        <div className="flex gap-2">
+        <div className="flex flex-1 flex-col">
+          <p className="line-clamp-2 text-sm text-muted-foreground">{clip.notes}</p>
+          <p className="mt-auto pt-3 text-xs text-muted-foreground">Added {formatDate(clip.createdAt)}</p>
+        </div>
+        <div className="mt-auto flex gap-2 pt-1">
           {linkTo ? (
             <Button asChild className="flex-1" size="sm">
               <Link to={linkTo}>Open Clip</Link>

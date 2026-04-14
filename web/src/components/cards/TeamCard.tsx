@@ -13,9 +13,11 @@ export function TeamCard({ team, schoolName, playerCount }: TeamCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{team.name}</CardTitle>
-          <Badge variant="secondary">{capitalize(team.level)}</Badge>
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="min-w-0 flex-1 text-lg leading-snug">{team.name}</CardTitle>
+          <Badge className="shrink-0 self-start" variant="secondary">
+            {capitalize(team.level)}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 text-sm text-muted-foreground">

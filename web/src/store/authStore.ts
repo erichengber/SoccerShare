@@ -1,43 +1,42 @@
 import { create } from "zustand";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabaseClient";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { UserRole } from "@/types/domain";
 
-type AuthMetadata = {
-  selected_role?: UserRole;
-  selected_user_id?: string;
-};
+interface AuthActionResult {
+  success: boolean;
+  error?: string;
+  role?: UserRole;
+}
 
 interface AuthState {
-  isInitialized: boolean;
-  isLoading: boolean;
-  user: User | null;
-  session: Session | null;
   selectedRole?: UserRole;
   selectedUserId?: string;
-  error?: string;
-  initialize: () => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<string | undefined>;
-  signUpWithEmail: (
-    email: string,
-    password: string,
-    metadata?: Record<string, unknown>
-  ) => Promise<string | undefined>;
-  selectRole: (role: UserRole) => Promise<string | undefined>;
-  signOut: () => Promise<void>;
-  clearError: () => void;
+  authEmail?: string;
+  accounts: Record<string, AuthAccount>;
+  selectRole: (role: UserRole, userId: string) => void;
+  clearSession: () => void;
+  login: (email: string, password: string) => AuthActionResult;
+  register: (input: RegisterAccountInput) => AuthActionResult;
 }
 
 function parseRoleFromMetadata(user: User | null): UserRole | undefined {
   const role = (user?.user_metadata as AuthMetadata | undefined)?.selected_role;
-  return role === "player" || role === "parent" || role === "coach" || role === "recruiter"
+  return role === "player" ||
+    role === "parent" ||
+    role === "coach" ||
+    role === "recruiter"
     ? role
     : undefined;
 }
 
-function parseUserIdFromMetadata(user: User | null, selectedRole?: UserRole): string | undefined {
+function parseUserIdFromMetadata(
+  user: User | null,
+  selectedRole?: UserRole,
+): string | undefined {
   // Backward compatibility: keep reading legacy selected_user_id if present.
-  const userId = (user?.user_metadata as AuthMetadata | undefined)?.selected_user_id;
+  const userId = (user?.user_metadata as AuthMetadata | undefined)
+    ?.selected_user_id;
   if (typeof userId === "string" && userId.length > 0) return userId;
 
   // Non-demo flow: role-scoped pages use the authenticated user id.
@@ -46,21 +45,41 @@ function parseUserIdFromMetadata(user: User | null, selectedRole?: UserRole): st
   return undefined;
 }
 
-function parseMetadataOverride(
-  metadata?: Record<string, unknown>
-): { selectedRole?: UserRole } {
+function parseMetadataOverride(metadata?: Record<string, unknown>): {
+  selectedRole?: UserRole;
+} {
   const selectedRole = metadata?.selected_role;
 
   return {
     selectedRole:
-      selectedRole === "player" || selectedRole === "parent" || selectedRole === "coach" || selectedRole === "recruiter"
+      selectedRole === "player" ||
+      selectedRole === "parent" ||
+      selectedRole === "coach" ||
+      selectedRole === "recruiter"
         ? selectedRole
-        : undefined
+        : undefined,
   };
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
   let hasListener = false;
+
+  function requireSupabaseForAuth() {
+    if (!isSupabaseConfigured || !supabase) {
+      return "Authentication is unavailable because Supabase environment variables are not configured.";
+    }
+
+    return undefined;
+  }
+
+  function getSupabaseClient() {
+    const configurationError = requireSupabaseForAuth();
+    if (configurationError || !supabase) {
+      return { client: null, error: configurationError };
+    }
+
+    return { client: supabase, error: undefined };
+  }
 
   const applySession = (session: Session | null) => {
     const user = session?.user ?? null;
@@ -69,7 +88,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       user,
       session,
       selectedRole,
-      selectedUserId: parseUserIdFromMetadata(user, selectedRole)
+      selectedUserId: parseUserIdFromMetadata(user, selectedRole),
     });
   };
 
@@ -86,7 +105,27 @@ export const useAuthStore = create<AuthState>((set, get) => {
       if (get().isInitialized) return;
 
       set({ isLoading: true, error: undefined });
-      const { data, error } = await supabase.auth.getSession();
+      const configurationError = requireSupabaseForAuth();
+      if (configurationError) {
+        set({
+          isInitialized: true,
+          isLoading: false,
+          user: null,
+          session: null,
+          selectedRole: undefined,
+          selectedUserId: undefined,
+          error: undefined,
+        });
+        return;
+      }
+
+      const { client } = getSupabaseClient();
+      if (!client) {
+        set({ isInitialized: true, isLoading: false });
+        return;
+      }
+
+      const { data, error } = await client.auth.getSession();
       if (error) {
         set({ error: error.message });
       }
@@ -95,7 +134,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
       if (!hasListener) {
         hasListener = true;
-        supabase.auth.onAuthStateChange((_event, nextSession) => {
+        client.auth.onAuthStateChange((_event, nextSession) => {
           applySession(nextSession);
         });
       }
@@ -105,7 +144,22 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     signInWithEmail: async (email, password) => {
       set({ isLoading: true, error: undefined });
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const configurationError = requireSupabaseForAuth();
+      if (configurationError) {
+        set({ isLoading: false, error: configurationError });
+        return configurationError;
+      }
+
+      const { client } = getSupabaseClient();
+      if (!client) {
+        set({ isLoading: false });
+        return configurationError;
+      }
+
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (data.session) {
         applySession(data.session);
       }
@@ -115,17 +169,29 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     signUpWithEmail: async (email, password, metadata) => {
       set({ isLoading: true, error: undefined });
-      const { data, error } = await supabase.auth.signUp({
+      const configurationError = requireSupabaseForAuth();
+      if (configurationError) {
+        set({ isLoading: false, error: configurationError });
+        return configurationError;
+      }
+
+      const { client } = getSupabaseClient();
+      if (!client) {
+        set({ isLoading: false });
+        return configurationError;
+      }
+
+      const { data, error } = await client.auth.signUp({
         email,
         password,
-        options: metadata ? { data: metadata } : undefined
+        options: metadata ? { data: metadata } : undefined,
       });
       const metadataOverride = parseMetadataOverride(metadata);
       if (data.session) {
         applySession(data.session);
         set((state) => ({
           selectedRole: state.selectedRole ?? metadataOverride.selectedRole,
-          selectedUserId: state.selectedUserId ?? data.session?.user.id
+          selectedUserId: state.selectedUserId ?? data.session?.user.id,
         }));
       }
       set({ isLoading: false, error: error?.message });
@@ -133,6 +199,18 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     selectRole: async (role) => {
+      const configurationError = requireSupabaseForAuth();
+      if (configurationError) {
+        set({ error: configurationError });
+        return configurationError;
+      }
+
+      const { client } = getSupabaseClient();
+      if (!client) {
+        set({ error: configurationError });
+        return configurationError;
+      }
+
       const { user } = get();
       if (!user) {
         const message = "You must sign in before selecting a role.";
@@ -141,12 +219,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
 
       set({ isLoading: true, error: undefined });
-      const { data, error } = await supabase.auth.updateUser({
+      const { data, error } = await client.auth.updateUser({
         data: {
           ...(user.user_metadata ?? {}),
           selected_role: role,
-          selected_user_id: null
-        }
+          selected_user_id: null,
+        },
       });
 
       if (error) {
@@ -158,14 +236,28 @@ export const useAuthStore = create<AuthState>((set, get) => {
         user: data.user,
         selectedRole: role,
         selectedUserId: data.user.id,
-        isLoading: false
+        isLoading: false,
       });
       return undefined;
     },
 
     signOut: async () => {
       set({ isLoading: true, error: undefined });
-      const { error } = await supabase.auth.signOut();
+      const configurationError = requireSupabaseForAuth();
+      if (configurationError) {
+        applySession(null);
+        set({ isLoading: false });
+        return;
+      }
+
+      const { client } = getSupabaseClient();
+      if (!client) {
+        applySession(null);
+        set({ isLoading: false });
+        return;
+      }
+
+      const { error } = await client.auth.signOut();
       if (error) {
         set({ isLoading: false, error: error.message });
         return;
@@ -175,6 +267,6 @@ export const useAuthStore = create<AuthState>((set, get) => {
       set({ isLoading: false });
     },
 
-    clearError: () => set({ error: undefined })
+    clearError: () => set({ error: undefined }),
   };
 });
