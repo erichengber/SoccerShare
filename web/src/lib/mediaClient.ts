@@ -65,12 +65,12 @@ export function resolveSeededPublicAssetUrl(localPublicPath: string) {
     return localPublicPath;
   }
 
-  const assetName = localPublicPath.split("/").pop();
-  if (!assetName) {
+  const normalizedPath = localPublicPath.replace(/^\/+/, "");
+  if (!normalizedPath) {
     return localPublicPath;
   }
 
-  return getPublicUrl(`${SEEDED_PUBLIC_PREFIX}/${assetName}`);
+  return getPublicUrl(`${SEEDED_PUBLIC_PREFIX}/${normalizedPath}`);
 }
 
 export async function uploadClipMedia(params: {
