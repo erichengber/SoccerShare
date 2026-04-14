@@ -1,3 +1,4 @@
+import { resolveSeededPublicAssetUrl } from "@/lib/mediaClient";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { Clip } from "@/types/domain";
 
@@ -20,13 +21,19 @@ interface ClipClientResult<T> {
   error?: string;
 }
 
+function normalizeClipAssetUrl(url: string | null) {
+  if (!url) return undefined;
+  if (!url.startsWith("/")) return url;
+  return resolveSeededPublicAssetUrl(url);
+}
+
 function mapClipRowToClip(row: ClipRow): Clip {
   return {
     id: row.id,
     playerId: row.player_id,
     title: row.title,
-    videoUrl: row.video_url,
-    posterUrl: row.poster_url ?? undefined,
+    videoUrl: normalizeClipAssetUrl(row.video_url) ?? row.video_url,
+    posterUrl: normalizeClipAssetUrl(row.poster_url),
     durationSec: row.duration_sec,
     tags: (row.tags ?? []) as Clip["tags"],
     notes: row.notes ?? "",

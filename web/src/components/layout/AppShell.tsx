@@ -13,22 +13,22 @@ const navByRole: Record<UserRole, { label: string; path: string }[]> = {
     { label: "Overview", path: "/player" },
     { label: "Profile", path: "/player/profile" },
     { label: "Clips", path: "/player/clips" },
-    { label: "Schedule", path: "/player/schedule" }
+    { label: "Schedule", path: "/player/schedule" },
   ],
   parent: [
     { label: "Overview", path: "/parent" },
-    { label: "Players", path: "/parent/players" }
+    { label: "Players", path: "/parent/players" },
   ],
   coach: [
     { label: "Team Overview", path: "/coach" },
     { label: "Roster", path: "/coach/roster" },
-    { label: "Schedule", path: "/coach/schedule" }
+    { label: "Schedule", path: "/coach/schedule" },
   ],
   recruiter: [
     { label: "Tournaments", path: "/recruiter" },
     { label: "Favorites", path: "/recruiter/favorites" },
-    { label: "Saved Clips", path: "/recruiter/saved-clips" }
-  ]
+    { label: "Saved Clips", path: "/recruiter/saved-clips" },
+  ],
 };
 
 export function AppShell() {
@@ -73,10 +73,12 @@ export function AppShell() {
           <nav className="grid gap-1">
             {links.map((link) => (
               <NavLink
+                end={link.path === `/${selectedRole}`}
                 className={({ isActive }) =>
                   cn(
                     "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                    isActive && "bg-primary text-primary-foreground hover:bg-primary"
+                    isActive &&
+                      "bg-primary text-primary-foreground hover:bg-primary",
                   )
                 }
                 key={link.path}
@@ -87,9 +89,7 @@ export function AppShell() {
             ))}
           </nav>
           <Separator className="my-3" />
-          <p className="px-3 text-xs text-muted-foreground">
-            Role-based workspace with coach team creation synced to Supabase.
-          </p>
+          <p className="px-3 text-xs text-muted-foreground"></p>
         </aside>
 
         <main className="min-w-0">
