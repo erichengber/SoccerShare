@@ -28,6 +28,7 @@ import { RecruiterGameDetailPage } from "@/pages/recruiter/RecruiterGameDetailPa
 import { RecruiterPlayerDetailPage } from "@/pages/recruiter/RecruiterPlayerDetailPage";
 import { RecruiterFavoritesPage } from "@/pages/recruiter/RecruiterFavoritesPage";
 import { RecruiterSavedClipsPage } from "@/pages/recruiter/RecruiterSavedClipsPage";
+import { RecruiterAllClipsPage } from "@/pages/recruiter/RecruiterAllClipsPage";
 import { AccountPage } from "@/pages/shared/AccountPage";
 import { RecruiterClipDetailPage } from "@/pages/recruiter/RecruiterClipDetailPage";
 
