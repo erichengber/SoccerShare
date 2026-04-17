@@ -28,6 +28,8 @@ import { RecruiterGameDetailPage } from "@/pages/recruiter/RecruiterGameDetailPa
 import { RecruiterPlayerDetailPage } from "@/pages/recruiter/RecruiterPlayerDetailPage";
 import { RecruiterFavoritesPage } from "@/pages/recruiter/RecruiterFavoritesPage";
 import { RecruiterSavedClipsPage } from "@/pages/recruiter/RecruiterSavedClipsPage";
+import { RecruiterAllClipsPage } from "@/pages/recruiter/RecruiterAllClipsPage";
+import { RecruiterClipDetailPage } from "@/pages/recruiter/RecruiterClipDetailPage";
 
 export function AppRoutes() {
   return (
@@ -86,9 +88,11 @@ export function AppRoutes() {
           <Route element={<RecruiterTournamentBrowserPage />} path="recruiter" />
           <Route element={<RecruiterTournamentDetailPage />} path="recruiter/tournaments/:tournamentId" />
           <Route element={<RecruiterGameDetailPage />} path="recruiter/games/:gameId" />
+          <Route element={<RecruiterClipDetailPage />} path="recruiter/clips/:clipId" />
           <Route element={<RecruiterPlayerDetailPage />} path="recruiter/players/:playerId" />
           <Route element={<RecruiterFavoritesPage />} path="recruiter/favorites" />
           <Route element={<RecruiterSavedClipsPage />} path="recruiter/saved-clips" />
+          <Route element={<RecruiterAllClipsPage />} path="recruiter/all-clips" />
         </Route>
       </Route>
 

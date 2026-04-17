@@ -48,6 +48,7 @@ export function RecruiterPlayerDetailPage() {
                   clip={clip}
                   isSaved={savedClipIds.includes(clip.id)}
                   key={clip.id}
+                  linkTo={`/recruiter/clips/${clip.id}`}
                   onToggleSave={() => toggleSavedClip(clip.id)}
                   playerName={`${player.firstName} ${player.lastName}`}
                 />

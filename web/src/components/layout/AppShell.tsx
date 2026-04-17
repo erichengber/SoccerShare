@@ -25,6 +25,7 @@ const navByRole: Record<UserRole, { label: string; path: string }[]> = {
   ],
   recruiter: [
     { label: "Tournaments", path: "/recruiter" },
+    { label: "All Clips", path: "/recruiter/all-clips" },
     { label: "Favorites", path: "/recruiter/favorites" },
     { label: "Saved Clips", path: "/recruiter/saved-clips" }
   ]
