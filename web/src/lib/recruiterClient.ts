@@ -1,8 +1,19 @@
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import type { Recruiter } from "@/types/domain";
 
 interface RecruiterClientResult<T> {
   data?: T;
   error?: string;
+}
+
+interface RecruiterRow {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  organization: string | null;
+  region: string | null;
 }
 
 interface UpsertRecruiterPayload {
@@ -13,6 +24,47 @@ interface UpsertRecruiterPayload {
   avatarUrl: string;
   organization: string;
   region: string;
+}
+
+function mapRecruiterRowToRecruiter(row: RecruiterRow): Recruiter {
+  return {
+    id: row.id,
+    role: "recruiter",
+    firstName: row.first_name?.trim() || "New",
+    lastName: row.last_name?.trim() || "Recruiter",
+    email: row.email?.trim().toLowerCase() || "",
+    avatarUrl: row.avatar_url?.trim() || "",
+    organization: row.organization?.trim() || "",
+    region: row.region?.trim() || ""
+  };
+}
+
+export async function fetchRecruiterFromSupabase(
+  recruiterId: string
+): Promise<RecruiterClientResult<Recruiter>> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from("recruiters")
+    .select("id, first_name, last_name, email, avatar_url, organization, region")
+    .eq("id", recruiterId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      error: error.message
+    };
+  }
+
+  if (!data) {
+    return {};
+  }
+
+  return {
+    data: mapRecruiterRowToRecruiter(data as RecruiterRow)
+  };
 }
 
 export async function upsertRecruiterInSupabase(

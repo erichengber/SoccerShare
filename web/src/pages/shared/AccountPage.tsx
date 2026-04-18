@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Camera, CircleUserRound } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,6 @@ export function AccountPage() {
   const [jerseyNumber, setJerseyNumber] = useState(String(player?.jerseyNumber ?? ""));
   const [playerTeamId, setPlayerTeamId] = useState(player?.teamIds[0] ?? data.teams[0]?.id ?? "");
   const [bio, setBio] = useState(player?.bio ?? "");
-  const [linkedPlayerId, setLinkedPlayerId] = useState(parent?.playerIds[0] ?? data.players[0]?.id ?? "");
   const [teamName, setTeamName] = useState(coachTeam?.name ?? "");
   const [teamLevel, setTeamLevel] = useState<TeamLevel>(coachTeam?.level ?? "club");
   const [schoolId, setSchoolId] = useState(coach?.schoolId ?? "none");
@@ -129,8 +129,7 @@ export function AccountPage() {
         case "parent":
           result = await updateParentProfile({
             parentId: activeParent!.id,
-            avatarUrl,
-            playerId: linkedPlayerId
+            avatarUrl
           });
           break;
         case "coach":
@@ -278,20 +277,33 @@ export function AccountPage() {
             ) : null}
 
             {selectedRole === "parent" ? (
-              <div className="space-y-2">
-                <Label htmlFor="parent-player">Linked player</Label>
-                <Select onValueChange={setLinkedPlayerId} value={linkedPlayerId}>
-                  <SelectTrigger id="parent-player">
-                    <SelectValue placeholder="Select player" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {data.players.map((playerOption) => (
-                      <SelectItem key={playerOption.id} value={playerOption.id}>
-                        {playerOption.firstName} {playerOption.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4 rounded-2xl border bg-slate-50/80 p-4">
+                <div className="space-y-2">
+                  <Label>Linked players</Label>
+                  {activeParent!.playerIds.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {activeParent!.playerIds.map((playerId) => {
+                        const linkedPlayer = data.players.find((entry) => entry.id === playerId);
+                        return (
+                          <Badge key={playerId} variant="outline">
+                            {linkedPlayer ? `${linkedPlayer.firstName} ${linkedPlayer.lastName}` : playerId}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">No players linked yet.</p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-slate-500">
+                    Add or review linked players from the parent management page.
+                  </p>
+                  <Button asChild type="button" variant="outline">
+                    <Link to="/parent/players">Manage Players</Link>
+                  </Button>
+                </div>
               </div>
             ) : null}
 

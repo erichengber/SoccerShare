@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase";
-import type { Team, TeamLevel } from "@/types/domain";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import type { Coach, Team, TeamLevel } from "@/types/domain";
 
 interface TeamRow {
   id: string;
@@ -14,6 +14,13 @@ interface CoachRow {
   id: string;
   team_id: string | null;
   school_id: string | null;
+}
+
+interface CoachProfileRow extends CoachRow {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
 }
 
 interface TeamClientResult<T> {
@@ -48,6 +55,19 @@ interface CoachTeamSnapshot {
   team?: Team;
   teamId?: string;
   schoolId?: string;
+}
+
+function mapCoachProfileRowToCoach(row: CoachProfileRow): Coach {
+  return {
+    id: row.id,
+    role: "coach",
+    firstName: row.first_name?.trim() || "New",
+    lastName: row.last_name?.trim() || "Coach",
+    email: row.email?.trim().toLowerCase() || "",
+    avatarUrl: row.avatar_url?.trim() || "",
+    teamId: row.team_id ?? undefined,
+    schoolId: row.school_id ?? undefined
+  };
 }
 
 function mapTeamRowToTeam(row: TeamRow): Team {
@@ -154,6 +174,57 @@ export async function createCoachTeamInSupabase(
     data: {
       team: mapTeamRowToTeam(normalizedCreatedTeamRow)
     }
+  };
+}
+
+export async function fetchTeamsFromSupabase(): Promise<TeamClientResult<Team[]>> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      data: []
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, name, level, school_id, coach_ids, player_ids")
+    .order("name", { ascending: true });
+
+  if (error) {
+    return {
+      error: error.message
+    };
+  }
+
+  return {
+    data: (data as TeamRow[]).map(mapTeamRowToTeam)
+  };
+}
+
+export async function fetchCoachProfileFromSupabase(
+  coachId: string
+): Promise<TeamClientResult<Coach>> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from("coaches")
+    .select("id, first_name, last_name, email, avatar_url, team_id, school_id")
+    .eq("id", coachId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      error: error.message
+    };
+  }
+
+  if (!data) {
+    return {};
+  }
+
+  return {
+    data: mapCoachProfileRowToCoach(data as CoachProfileRow)
   };
 }
 
@@ -284,5 +355,36 @@ export async function updateCoachProfileInSupabase(
     data: {
       team: mapTeamRowToTeam(updatedTeamRow as TeamRow)
     }
+  };
+}
+
+export async function updateTeamPlayersInSupabase(
+  teamId: string,
+  playerIds: string[]
+): Promise<TeamClientResult<Team>> {
+  if (!supabase) {
+    return {
+      error:
+        "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY (or VITE_SUPABASE_ANON_KEY)."
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("teams")
+    .update({
+      player_ids: playerIds
+    })
+    .eq("id", teamId)
+    .select("id, name, level, school_id, coach_ids, player_ids")
+    .single();
+
+  if (error || !data) {
+    return {
+      error: error?.message ?? "Unable to update team roster in Supabase."
+    };
+  }
+
+  return {
+    data: mapTeamRowToTeam(data as TeamRow)
   };
 }

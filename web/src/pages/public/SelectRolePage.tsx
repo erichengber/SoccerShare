@@ -3,8 +3,9 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { USER_ROLES } from "@/constants/domain";
-import { getHomePathForRole } from "@/lib/roleRouting";
+import { getHomePathForRole, getOnboardingPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
+import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
 
 const roleDescriptions: Record<UserRole, string> = {
@@ -17,6 +18,7 @@ const roleDescriptions: Record<UserRole, string> = {
 export function SelectRolePage() {
   const navigate = useNavigate();
   const { user, isLoading, selectRole } = useAuthStore();
+  const { data } = useDataStore();
 
   const [role, setRole] = useState<UserRole>("player");
 
@@ -27,7 +29,20 @@ export function SelectRolePage() {
   async function handleContinue() {
     const maybeError = await selectRole(role);
     if (maybeError) return;
-    navigate(getHomePathForRole(role));
+
+    const authUserId = useAuthStore.getState().user?.id;
+    if (!authUserId) {
+      navigate(getHomePathForRole(role));
+      return;
+    }
+
+    const hasExistingProfile =
+      (role === "player" && data.players.some((entry) => entry.id === authUserId)) ||
+      (role === "parent" && data.parents.some((entry) => entry.id === authUserId)) ||
+      (role === "coach" && data.coaches.some((entry) => entry.id === authUserId)) ||
+      (role === "recruiter" && data.recruiters.some((entry) => entry.id === authUserId));
+
+    navigate(hasExistingProfile ? getHomePathForRole(role) : getOnboardingPathForRole(role));
   }
 
   return (

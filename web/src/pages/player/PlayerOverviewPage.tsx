@@ -1,4 +1,4 @@
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { ClipCard } from "@/components/cards/ClipCard";
@@ -19,10 +19,6 @@ export function PlayerOverviewPage() {
 
   if (!player) {
     return <EmptyState description="Player profile not found for this account." title="Player not found" />;
-  }
-
-  if (!player.teamIds.length || !player.bio.trim()) {
-    return <Navigate replace to="/onboarding/player" />;
   }
 
   const clips = data.clips.filter((clip) => clip.playerId === player.id);

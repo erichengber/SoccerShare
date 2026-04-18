@@ -64,7 +64,7 @@ export function CoachRosterPage() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Invite Player to Team</CardTitle>
-          <CardDescription>Send a roster invite for player or parent acceptance.</CardDescription>
+          <CardDescription>Send a roster invite that the player accepts from their own dashboard.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {inviteCandidates.length ? (

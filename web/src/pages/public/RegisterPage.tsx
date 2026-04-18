@@ -8,9 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { USER_ROLES } from "@/constants/domain";
 import { capitalize } from "@/lib/format";
-import { getDefaultPathForRole } from "@/lib/roleRouting";
+import { getOnboardingPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
-import { useDataStore } from "@/store/dataStore";
 import type { UserRole } from "@/types/domain";
 
 type RoleSelection = UserRole | "unset";
@@ -18,7 +17,6 @@ type RoleSelection = UserRole | "unset";
 export function RegisterPage() {
   const navigate = useNavigate();
   const { signUpWithEmail } = useAuthStore();
-  const { data } = useDataStore();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -95,9 +93,9 @@ export function RegisterPage() {
         return;
       }
 
-      const { selectedRole, selectedUserId, user } = useAuthStore.getState();
+      const { selectedRole, user } = useAuthStore.getState();
       if (user && selectedRole) {
-        navigate(getDefaultPathForRole(selectedRole, selectedUserId, data));
+        navigate(getOnboardingPathForRole(selectedRole));
         return;
       }
 

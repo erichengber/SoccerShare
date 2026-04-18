@@ -1,4 +1,3 @@
-import { Navigate } from "react-router-dom";
 import { PlayerCard } from "@/components/cards/PlayerCard";
 import { TournamentCard } from "@/components/cards/TournamentCard";
 import { FiltersPanel } from "@/components/filters/FiltersPanel";
@@ -19,10 +18,6 @@ export function RecruiterTournamentBrowserPage() {
 
   if (!recruiter) {
     return <EmptyState description="Select a valid recruiter demo user." title="Recruiter not found" />;
-  }
-
-  if (!recruiter.organization.trim() || !recruiter.region.trim()) {
-    return <Navigate replace to="/onboarding/recruiter" />;
   }
 
   const filteredPlayers = filterRecruiterPlayers(data, recruiterFilters);

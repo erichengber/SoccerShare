@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { getAccountPathForRole } from "@/lib/roleRouting";
 import { useAuthStore } from "@/store/authStore";
 import { useDataStore } from "@/store/dataStore";
-import { getSchoolName, getTeamName } from "@/lib/selectors";
+import { getRosterSize, getSchoolName, getTeamName } from "@/lib/selectors";
 
 export function PlayerProfilePage() {
   const { selectedUserId } = useAuthStore();
@@ -21,9 +21,17 @@ export function PlayerProfilePage() {
     );
   }
 
-  const teammateList = data.players.filter((entry) =>
-    player.teammateIds.includes(entry.id),
-  );
+  const teammateIds = new Set([
+    ...player.teammateIds,
+    ...data.players
+      .filter(
+        (entry) =>
+          entry.id !== player.id &&
+          entry.teamIds.some((teamId) => player.teamIds.includes(teamId)),
+      )
+      .map((entry) => entry.id)
+  ]);
+  const teammateList = data.players.filter((entry) => teammateIds.has(entry.id));
   const teams = data.teams.filter((team) => player.teamIds.includes(team.id));
   const accountPath = getAccountPathForRole("player");
 
@@ -52,7 +60,7 @@ export function PlayerProfilePage() {
               {teams.map((team) => (
                 <TeamCard
                   key={team.id}
-                  playerCount={team.playerIds.length}
+                  playerCount={getRosterSize(data, team.id)}
                   schoolName={getSchoolName(data, team.schoolId)}
                   team={team}
                 />

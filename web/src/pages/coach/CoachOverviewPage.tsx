@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
 import { TeamCard } from "@/components/cards/TeamCard";
 import { ClipCard } from "@/components/cards/ClipCard";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -30,10 +29,6 @@ export function CoachOverviewPage() {
     return <EmptyState description="Coach profile not found for this account." title="Coach not found" />;
   }
   const coachId = coach.id;
-
-  if (!coach.teamId) {
-    return <Navigate replace to="/onboarding/coach" />;
-  }
 
   const team = data.teams.find((entry) => entry.id === coach.teamId);
   const roster = team ? data.players.filter((player) => player.teamIds.includes(team.id)) : [];

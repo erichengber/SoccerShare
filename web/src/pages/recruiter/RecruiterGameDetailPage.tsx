@@ -6,7 +6,7 @@ import { TeamCard } from "@/components/cards/TeamCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
-import { getPublicClipsForGame, getPlayersForGame, getSchoolName, getTeamName } from "@/lib/selectors";
+import { getPublicClipsForGame, getPlayersForGame, getRosterSize, getSchoolName, getTeamName } from "@/lib/selectors";
 import { useDataStore } from "@/store/dataStore";
 import { useRecruiterStore } from "@/store/recruiterStore";
 
@@ -53,14 +53,14 @@ export function RecruiterGameDetailPage() {
       <section className="grid gap-4 md:grid-cols-2">
         {homeTeam ? (
           <TeamCard
-            playerCount={homeTeam.playerIds.length}
+            playerCount={getRosterSize(data, homeTeam.id)}
             schoolName={getSchoolName(data, homeTeam.schoolId)}
             team={homeTeam}
           />
         ) : null}
         {awayTeam ? (
           <TeamCard
-            playerCount={awayTeam.playerIds.length}
+            playerCount={getRosterSize(data, awayTeam.id)}
             schoolName={getSchoolName(data, awayTeam.schoolId)}
             team={awayTeam}
           />

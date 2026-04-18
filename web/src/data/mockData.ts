@@ -229,13 +229,13 @@ const players: Player[] = [
     email: "test.player@example.com",
     avatarUrl: playerHeadshots[1],
     gradYear: 2029,
-    position: "Central Midfielder",
-    jerseyNumber: 0,
-    teamIds: [],
-    parentIds: [],
-    teammateIds: [],
-    privacy: "private",
-    bio: ""
+    position: "Attacking Midfielder",
+    jerseyNumber: 14,
+    teamIds: ["team-1"],
+    parentIds: ["parent-6"],
+    teammateIds: ["player-7", "player-8"],
+    privacy: "public",
+    bio: "Creative midfielder who combines quickly and looks to unlock runners around the box."
   },
   {
     id: "player-12",
@@ -308,7 +308,7 @@ const parents: Parent[] = [
     lastName: "Parent",
     email: "test.parent@example.com",
     avatarUrl: "https://i.pravatar.cc/300?img=12",
-    playerIds: []
+    playerIds: ["player-11"]
   }
 ];
 
@@ -357,7 +357,8 @@ const coaches: Coach[] = [
     firstName: "Marisol",
     lastName: "Vega",
     email: "marisol.vega@example.com",
-    avatarUrl: "https://i.pravatar.cc/300?img=31"
+    avatarUrl: "https://i.pravatar.cc/300?img=31",
+    teamId: "team-1"
   }
 ];
 
@@ -399,8 +400,8 @@ const teams: Team[] = [
     id: "team-1",
     name: "River City Rec",
     level: "rec",
-    coachIds: [],
-    playerIds: ["player-7", "player-8"]
+    coachIds: ["coach-5"],
+    playerIds: ["player-7", "player-8", "player-11"]
   },
   {
     id: "team-2",

@@ -255,7 +255,7 @@ export interface PlayerProfileUpdateInput {
 export interface ParentProfileUpdateInput {
   parentId: string;
   avatarUrl: string;
-  playerId: string;
+  playerId?: string;
 }
 
 export interface CoachProfileUpdateInput {

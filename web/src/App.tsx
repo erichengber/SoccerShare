@@ -9,6 +9,7 @@ export default function App() {
   const user = useAuthStore((state) => state.user);
   const selectedRole = useAuthStore((state) => state.selectedRole);
   const loadPlayerDirectory = useDataStore((state) => state.loadPlayerDirectory);
+  const loadTeams = useDataStore((state) => state.loadTeams);
   const loadClips = useDataStore((state) => state.loadClips);
   const loadTeamInvites = useDataStore((state) => state.loadTeamInvites);
   const loadSchedule = useDataStore((state) => state.loadSchedule);
@@ -21,6 +22,10 @@ export default function App() {
   useEffect(() => {
     void loadPlayerDirectory();
   }, [loadPlayerDirectory]);
+
+  useEffect(() => {
+    void loadTeams();
+  }, [loadTeams]);
 
   useEffect(() => {
     void loadClips();

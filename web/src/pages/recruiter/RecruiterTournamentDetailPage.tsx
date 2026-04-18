@@ -3,7 +3,7 @@ import { GameCard } from "@/components/cards/GameCard";
 import { TeamCard } from "@/components/cards/TeamCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { getSchoolName, getTeamName } from "@/lib/selectors";
+import { getRosterSize, getSchoolName, getTeamName } from "@/lib/selectors";
 import { useDataStore } from "@/store/dataStore";
 
 export function RecruiterTournamentDetailPage() {
@@ -53,7 +53,7 @@ export function RecruiterTournamentDetailPage() {
           {teams.map((team) => (
             <TeamCard
               key={team.id}
-              playerCount={team.playerIds.length}
+              playerCount={getRosterSize(data, team.id)}
               schoolName={getSchoolName(data, team.schoolId)}
               team={team}
             />

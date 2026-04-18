@@ -1,12 +1,22 @@
 import { create } from "zustand";
 import { mockData } from "@/data/mockData";
 import { fetchClipsFromSupabase, upsertClipInSupabase } from "@/lib/clipClient";
-import { fetchPlayersFromSupabase, upsertParentInSupabase, upsertPlayerInSupabase } from "@/lib/familyClient";
-import { upsertRecruiterInSupabase } from "@/lib/recruiterClient";
+import {
+  fetchParentFromSupabase,
+  fetchPlayerFromSupabase,
+  fetchPlayersByIdsFromSupabase,
+  fetchPlayersFromSupabase,
+  upsertParentInSupabase,
+  upsertPlayerInSupabase
+} from "@/lib/familyClient";
+import { fetchRecruiterFromSupabase, upsertRecruiterInSupabase } from "@/lib/recruiterClient";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
   createCoachTeamInSupabase,
+  fetchCoachProfileFromSupabase,
   fetchCoachTeamFromSupabase,
+  fetchTeamsFromSupabase,
+  updateTeamPlayersInSupabase,
   updateCoachProfileInSupabase
 } from "@/lib/teamClient";
 import {
@@ -45,6 +55,7 @@ import type {
   TeamInvite,
   TeamInviteResponseInput,
   Tournament,
+  User,
   UserRole
 } from "@/types/domain";
 
@@ -61,6 +72,9 @@ interface DataState {
   playerDirectoryInitialized: boolean;
   playerDirectoryLoading: boolean;
   playerDirectorySyncError?: string;
+  teamsInitialized: boolean;
+  teamsLoading: boolean;
+  teamsSyncError?: string;
   clipsInitialized: boolean;
   clipsLoading: boolean;
   clipsSyncError?: string;
@@ -71,6 +85,7 @@ interface DataState {
   scheduleLoading: boolean;
   scheduleSyncError?: string;
   loadPlayerDirectory: () => Promise<void>;
+  loadTeams: () => Promise<void>;
   loadClips: () => Promise<void>;
   loadTeamInvites: () => Promise<void>;
   loadSchedule: () => Promise<void>;
@@ -82,7 +97,7 @@ interface DataState {
     lastName?: string;
     organization?: string;
     recruiterRegion?: string;
-  }) => void;
+  }) => Promise<void>;
   createCoachTeam: (coachId: string, input: CreateCoachTeamInput) => AsyncActionResult;
   syncCoachTeamFromSupabase: (coachId: string) => AsyncActionResult;
   invitePlayerToTeam: (coachId: string, playerId: string) => AsyncActionResult;
@@ -125,6 +140,36 @@ function upsertPlayerCollection(players: Player[], player: Player) {
   return sortPlayersByName(nextPlayers);
 }
 
+function mergePlayers(localPlayers: Player[], remotePlayers: Player[]) {
+  const playersById = new Map<string, Player>();
+
+  localPlayers.forEach((player) => {
+    playersById.set(player.id, player);
+  });
+  remotePlayers.forEach((player) => {
+    playersById.set(player.id, player);
+  });
+
+  return sortPlayersByName(Array.from(playersById.values()));
+}
+
+function upsertUsers(users: User[], nextUsers: User[]) {
+  const usersById = new Map<string, User>();
+
+  users.forEach((user) => {
+    usersById.set(user.id, user);
+  });
+  nextUsers.forEach((user) => {
+    usersById.set(user.id, user);
+  });
+
+  return Array.from(usersById.values());
+}
+
+function upsertSingleUser(users: User[], nextUser: User) {
+  return upsertUsers(users, [nextUser]);
+}
+
 function upsertTeam(teams: Team[], team: Team): Team[] {
   const existingTeamIndex = teams.findIndex((entry) => entry.id === team.id);
   if (existingTeamIndex === -1) {
@@ -132,6 +177,19 @@ function upsertTeam(teams: Team[], team: Team): Team[] {
   }
 
   return teams.map((entry) => (entry.id === team.id ? team : entry));
+}
+
+function mergeTeams(localTeams: Team[], remoteTeams: Team[]) {
+  const teamsById = new Map<string, Team>();
+
+  localTeams.forEach((team) => {
+    teamsById.set(team.id, team);
+  });
+  remoteTeams.forEach((team) => {
+    teamsById.set(team.id, team);
+  });
+
+  return Array.from(teamsById.values()).sort((left, right) => left.name.localeCompare(right.name));
 }
 
 function applyCoachTeamAssignment(
@@ -276,6 +334,9 @@ export const useDataStore = create<DataState>((set, get) => ({
   playerDirectoryInitialized: false,
   playerDirectoryLoading: false,
   playerDirectorySyncError: undefined,
+  teamsInitialized: false,
+  teamsLoading: false,
+  teamsSyncError: undefined,
   clipsInitialized: false,
   clipsLoading: false,
   clipsSyncError: undefined,
@@ -316,12 +377,56 @@ export const useDataStore = create<DataState>((set, get) => ({
       return;
     }
 
-    set({
-      playerDirectory: sortPlayersByName(result.data),
+    set((state) => ({
+      playerDirectory: mergePlayers(state.playerDirectory, result.data ?? []),
       playerDirectoryInitialized: true,
       playerDirectoryLoading: false,
-      playerDirectorySyncError: undefined
+      playerDirectorySyncError: undefined,
+      data: {
+        ...state.data,
+        players: mergePlayers(state.data.players, result.data ?? []),
+        users: upsertUsers(state.data.users, result.data ?? [])
+      }
+    }));
+  },
+  loadTeams: async () => {
+    const { teamsInitialized, teamsLoading } = get();
+    if (teamsInitialized || teamsLoading) {
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      set({
+        teamsInitialized: true,
+        teamsLoading: false,
+        teamsSyncError: undefined
+      });
+      return;
+    }
+
+    set({
+      teamsLoading: true
     });
+
+    const result = await fetchTeamsFromSupabase();
+    if (!result.data) {
+      set({
+        teamsInitialized: true,
+        teamsLoading: false,
+        teamsSyncError: result.error ?? "Unable to sync teams from Supabase."
+      });
+      return;
+    }
+
+    set((state) => ({
+      teamsInitialized: true,
+      teamsLoading: false,
+      teamsSyncError: undefined,
+      data: {
+        ...state.data,
+        teams: mergeTeams(state.data.teams, result.data ?? [])
+      }
+    }));
   },
   loadClips: async () => {
     const { clipsInitialized, clipsLoading } = get();
@@ -422,125 +527,242 @@ export const useDataStore = create<DataState>((set, get) => ({
       };
     });
   },
-  ensureAuthProfile: (input) => {
+  ensureAuthProfile: async (input) => {
     const normalizedFirstName = input.firstName?.trim() || "New";
     const normalizedLastName = input.lastName?.trim() || "User";
     const normalizedEmail = input.email?.trim() || "";
     const avatarSeed = `${normalizedFirstName}-${normalizedLastName}`.toLowerCase();
     const fallbackAvatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(avatarSeed)}`;
+    const fallbackPlayer: Player = {
+      id: input.authUserId,
+      role: "player",
+      firstName: normalizedFirstName,
+      lastName: normalizedLastName,
+      email: normalizedEmail,
+      avatarUrl: fallbackAvatarUrl,
+      gradYear: new Date().getFullYear() + 2,
+      position: "Central Midfielder",
+      jerseyNumber: 0,
+      teamIds: [],
+      parentIds: [],
+      teammateIds: [],
+      privacy: "public",
+      bio: ""
+    };
+    const fallbackParent: Parent = {
+      id: input.authUserId,
+      role: "parent",
+      firstName: normalizedFirstName,
+      lastName: normalizedLastName,
+      email: normalizedEmail,
+      avatarUrl: fallbackAvatarUrl,
+      playerIds: []
+    };
+    const fallbackCoach: Coach = {
+      id: input.authUserId,
+      role: "coach",
+      firstName: normalizedFirstName,
+      lastName: normalizedLastName,
+      email: normalizedEmail,
+      avatarUrl: fallbackAvatarUrl,
+      teamId: undefined,
+      schoolId: undefined
+    };
+    const fallbackRecruiter = {
+      id: input.authUserId,
+      role: "recruiter" as const,
+      firstName: normalizedFirstName,
+      lastName: normalizedLastName,
+      email: normalizedEmail,
+      avatarUrl: fallbackAvatarUrl,
+      organization: input.organization?.trim() || "Independent Scout",
+      region: input.recruiterRegion?.trim() || "Unspecified"
+    };
 
-    set((state) => {
-      const existingUser = state.data.users.find((entry) => entry.id === input.authUserId);
-      if (existingUser && existingUser.role === input.role) {
-        return state;
-      }
+    const applyFallbackProfile = () => {
+      set((state) => {
+        const baseUsers = state.data.users.filter((entry) => entry.id !== input.authUserId);
+        const basePlayers = state.data.players.filter((entry) => entry.id !== input.authUserId);
+        const baseParents = state.data.parents.filter((entry) => entry.id !== input.authUserId);
+        const baseCoaches = state.data.coaches.filter((entry) => entry.id !== input.authUserId);
+        const baseRecruiters = state.data.recruiters.filter((entry) => entry.id !== input.authUserId);
 
-      const baseUsers = state.data.users.filter((entry) => entry.id !== input.authUserId);
-      const basePlayers = state.data.players.filter((entry) => entry.id !== input.authUserId);
-      const baseParents = state.data.parents.filter((entry) => entry.id !== input.authUserId);
-      const baseCoaches = state.data.coaches.filter((entry) => entry.id !== input.authUserId);
-      const baseRecruiters = state.data.recruiters.filter((entry) => entry.id !== input.authUserId);
-
-      const nextData: AppData = {
-        ...state.data,
-        users: baseUsers,
-        players: basePlayers,
-        parents: baseParents,
-        coaches: baseCoaches,
-        recruiters: baseRecruiters
-      };
-
-      if (input.role === "player") {
-        const player = {
-          id: input.authUserId,
-          role: "player" as const,
-          firstName: normalizedFirstName,
-          lastName: normalizedLastName,
-          email: normalizedEmail,
-          avatarUrl: fallbackAvatarUrl,
-          gradYear: new Date().getFullYear() + 2,
-          position: "Central Midfielder" as const,
-          jerseyNumber: 0,
-          teamIds: [],
-          parentIds: [],
-          teammateIds: [],
-          privacy: "public" as const,
-          bio: ""
+        const nextData: AppData = {
+          ...state.data,
+          users: baseUsers,
+          players: basePlayers,
+          parents: baseParents,
+          coaches: baseCoaches,
+          recruiters: baseRecruiters
         };
+
+        if (input.role === "player") {
+          return {
+            playerDirectory: upsertPlayerCollection(state.playerDirectory, fallbackPlayer),
+            data: {
+              ...nextData,
+              users: [fallbackPlayer, ...nextData.users],
+              players: [fallbackPlayer, ...nextData.players]
+            }
+          };
+        }
+
+        if (input.role === "parent") {
+          return {
+            data: {
+              ...nextData,
+              users: [fallbackParent, ...nextData.users],
+              parents: [fallbackParent, ...nextData.parents]
+            }
+          };
+        }
+
+        if (input.role === "coach") {
+          return {
+            data: {
+              ...nextData,
+              users: [fallbackCoach, ...nextData.users],
+              coaches: [fallbackCoach, ...nextData.coaches]
+            }
+          };
+        }
 
         return {
-          playerDirectory:
-            !isSupabaseConfigured && state.playerDirectoryInitialized
-              ? upsertPlayerCollection(state.playerDirectory, player)
-              : state.playerDirectory,
           data: {
             ...nextData,
-            users: [player, ...nextData.users],
-            players: [player, ...nextData.players]
+            users: [fallbackRecruiter, ...nextData.users],
+            recruiters: [fallbackRecruiter, ...nextData.recruiters]
           }
         };
+      });
+    };
+
+    if (isSupabaseConfigured) {
+      if (input.role === "player") {
+        const playerResult = await fetchPlayerFromSupabase(input.authUserId);
+        if (playerResult.data) {
+          const syncedPlayer = playerResult.data;
+          set((state) => {
+            const baseUsers = state.data.users.filter((entry) => entry.id !== input.authUserId);
+            const baseParents = state.data.parents.filter((entry) => entry.id !== input.authUserId);
+            const baseCoaches = state.data.coaches.filter((entry) => entry.id !== input.authUserId);
+            const baseRecruiters = state.data.recruiters.filter((entry) => entry.id !== input.authUserId);
+
+            return {
+              playerDirectory: upsertPlayerCollection(state.playerDirectory, syncedPlayer),
+              data: {
+                ...state.data,
+                users: upsertSingleUser(baseUsers, syncedPlayer),
+                players: upsertPlayerCollection(state.data.players, syncedPlayer),
+                parents: baseParents,
+                coaches: baseCoaches,
+                recruiters: baseRecruiters
+              }
+            };
+          });
+          return;
+        }
       }
 
       if (input.role === "parent") {
-        const parent = {
-          id: input.authUserId,
-          role: "parent" as const,
-          firstName: normalizedFirstName,
-          lastName: normalizedLastName,
-          email: normalizedEmail,
-          avatarUrl: fallbackAvatarUrl,
-          playerIds: []
-        };
+        const parentResult = await fetchParentFromSupabase(input.authUserId);
+        if (parentResult.data) {
+          const syncedParent = parentResult.data;
+          const linkedPlayersResult = await fetchPlayersByIdsFromSupabase(syncedParent.playerIds);
+          const linkedPlayers = linkedPlayersResult.data ?? [];
 
-        return {
-          data: {
-            ...nextData,
-            users: [parent, ...nextData.users],
-            parents: [parent, ...nextData.parents]
-          }
-        };
+          set((state) => {
+            const baseUsers = state.data.users.filter((entry) => entry.id !== input.authUserId);
+            const basePlayers = state.data.players.filter((entry) => entry.id !== input.authUserId);
+            const baseCoaches = state.data.coaches.filter((entry) => entry.id !== input.authUserId);
+            const baseRecruiters = state.data.recruiters.filter((entry) => entry.id !== input.authUserId);
+
+            return {
+              playerDirectory: mergePlayers(state.playerDirectory, linkedPlayers),
+              data: {
+                ...state.data,
+                users: upsertUsers(baseUsers, [syncedParent, ...linkedPlayers]),
+                players: mergePlayers(basePlayers, linkedPlayers),
+                parents: [
+                  syncedParent,
+                  ...state.data.parents.filter((entry) => entry.id !== input.authUserId)
+                ],
+                coaches: baseCoaches,
+                recruiters: baseRecruiters
+              }
+            };
+          });
+          return;
+        }
       }
 
       if (input.role === "coach") {
-        const coach = {
-          id: input.authUserId,
-          role: "coach" as const,
-          firstName: normalizedFirstName,
-          lastName: normalizedLastName,
-          email: normalizedEmail,
-          avatarUrl: fallbackAvatarUrl,
-          teamId: undefined,
-          schoolId: undefined
-        };
+        const [coachResult, teamSnapshotResult] = await Promise.all([
+          fetchCoachProfileFromSupabase(input.authUserId),
+          fetchCoachTeamFromSupabase(input.authUserId)
+        ]);
 
-        return {
-          data: {
-            ...nextData,
-            users: [coach, ...nextData.users],
-            coaches: [coach, ...nextData.coaches]
-          }
-        };
+        if (coachResult.data) {
+          const syncedCoach = coachResult.data;
+          const syncedTeam = teamSnapshotResult.data?.team;
+          const rosterPlayersResult = await fetchPlayersByIdsFromSupabase(syncedTeam?.playerIds ?? []);
+          const rosterPlayers = rosterPlayersResult.data ?? [];
+
+          set((state) => {
+            const baseUsers = state.data.users.filter((entry) => entry.id !== input.authUserId);
+            const baseParents = state.data.parents.filter((entry) => entry.id !== input.authUserId);
+            const baseRecruiters = state.data.recruiters.filter((entry) => entry.id !== input.authUserId);
+
+            return {
+              playerDirectory: mergePlayers(state.playerDirectory, rosterPlayers),
+              data: {
+                ...state.data,
+                users: upsertUsers(baseUsers, [syncedCoach, ...rosterPlayers]),
+                players: mergePlayers(state.data.players, rosterPlayers),
+                parents: baseParents,
+                coaches: [
+                  syncedCoach,
+                  ...state.data.coaches.filter((entry) => entry.id !== input.authUserId)
+                ],
+                recruiters: baseRecruiters,
+                teams: syncedTeam ? upsertTeam(state.data.teams, syncedTeam) : state.data.teams
+              }
+            };
+          });
+          return;
+        }
       }
 
-      const recruiter = {
-        id: input.authUserId,
-        role: "recruiter" as const,
-        firstName: normalizedFirstName,
-        lastName: normalizedLastName,
-        email: normalizedEmail,
-        avatarUrl: fallbackAvatarUrl,
-        organization: input.organization?.trim() || "Independent Scout",
-        region: input.recruiterRegion?.trim() || "Unspecified"
-      };
+      if (input.role === "recruiter") {
+        const recruiterResult = await fetchRecruiterFromSupabase(input.authUserId);
+        if (recruiterResult.data) {
+          const syncedRecruiter = recruiterResult.data;
+          set((state) => {
+            const baseUsers = state.data.users.filter((entry) => entry.id !== input.authUserId);
+            const basePlayers = state.data.players.filter((entry) => entry.id !== input.authUserId);
+            const baseParents = state.data.parents.filter((entry) => entry.id !== input.authUserId);
+            const baseCoaches = state.data.coaches.filter((entry) => entry.id !== input.authUserId);
 
-      return {
-        data: {
-          ...nextData,
-          users: [recruiter, ...nextData.users],
-          recruiters: [recruiter, ...nextData.recruiters]
+            return {
+              data: {
+                ...state.data,
+                users: upsertSingleUser(baseUsers, syncedRecruiter),
+                players: basePlayers,
+                parents: baseParents,
+                coaches: baseCoaches,
+                recruiters: [
+                  syncedRecruiter,
+                  ...state.data.recruiters.filter((entry) => entry.id !== input.authUserId)
+                ]
+              }
+            };
+          });
+          return;
         }
-      };
-    });
+      }
+    }
+
+    applyFallbackProfile();
   },
   createCoachTeam: async (coachId, input) => {
     const { data } = get();
@@ -722,19 +944,25 @@ export const useDataStore = create<DataState>((set, get) => ({
       return { success: false, error: "Invited player no longer exists." };
     }
 
-    if (responderRole === "player" && responderId !== player.id) {
-      return { success: false, error: "Players can only respond to their own invites." };
+    if (responderRole !== "player") {
+      return { success: false, error: "Players must respond to team invites from their own account." };
     }
 
-    if (responderRole === "parent") {
-      const parent = data.parents.find((entry) => entry.id === responderId);
-      if (!parent || !parent.playerIds.includes(player.id)) {
-        return { success: false, error: "Parent is not linked to this player." };
-      }
+    if (responderId !== player.id) {
+      return { success: false, error: "Players can only respond to their own invites." };
     }
 
     const nextStatus: TeamInvite["status"] = accept ? "accepted" : "declined";
     const respondedAt = new Date().toISOString();
+    const nextPlayer = accept ? addTeamToPlayer(player, invite.teamId) : player;
+    const currentTeam = data.teams.find((entry) => entry.id === invite.teamId);
+    const nextTeam =
+      accept && currentTeam && !currentTeam.playerIds.includes(invite.playerId)
+        ? {
+            ...currentTeam,
+            playerIds: [...currentTeam.playerIds, invite.playerId]
+          }
+        : currentTeam;
 
     let persistedInvite = invite;
     if (isSupabaseConfigured) {
@@ -753,6 +981,29 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
 
       persistedInvite = responseResult.data;
+
+      if (accept) {
+        const playerResult = await upsertPlayerInSupabase({
+          player: nextPlayer
+        });
+
+        if (!playerResult.data) {
+          return {
+            success: false,
+            error: playerResult.error ?? "Unable to update player team membership."
+          };
+        }
+
+        if (nextTeam) {
+          const teamResult = await updateTeamPlayersInSupabase(nextTeam.id, nextTeam.playerIds);
+          if (!teamResult.data) {
+            return {
+              success: false,
+              error: teamResult.error ?? "Unable to update team roster."
+            };
+          }
+        }
+      }
     } else {
       persistedInvite = {
         ...invite,
@@ -778,20 +1029,15 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
 
       const players = state.data.players.map((entry) =>
-        entry.id === invite.playerId ? addTeamToPlayer(entry, invite.teamId) : entry
+        entry.id === invite.playerId ? nextPlayer : entry
       );
-      const teams = state.data.teams.map((team) =>
-        team.id === invite.teamId && !team.playerIds.includes(invite.playerId)
-          ? { ...team, playerIds: [...team.playerIds, invite.playerId] }
-          : team
-      );
+      const teams = nextTeam ? upsertTeam(state.data.teams, nextTeam) : state.data.teams;
       const users = state.data.users.map((user) =>
-        user.role === "player" && user.id === invite.playerId
-          ? addTeamToPlayer(user, invite.teamId)
-          : user
+        user.role === "player" && user.id === invite.playerId ? nextPlayer : user
       );
 
       return {
+        playerDirectory: upsertPlayerCollection(state.playerDirectory, nextPlayer),
         data: {
           ...state.data,
           players,
@@ -1129,14 +1375,51 @@ export const useDataStore = create<DataState>((set, get) => ({
       avatarUrl
     };
 
-    const upsertResult = await upsertPlayerInSupabase({
-      player: playerForSupabase
+    const updatedTeams = data.teams.map((entry) => {
+      const shouldContainPlayer = entry.id === input.teamId;
+      const currentlyContainsPlayer = entry.playerIds.includes(input.playerId);
+
+      if (shouldContainPlayer && !currentlyContainsPlayer) {
+        return {
+          ...entry,
+          playerIds: [...entry.playerIds, input.playerId]
+        };
+      }
+
+      if (!shouldContainPlayer && currentlyContainsPlayer) {
+        return {
+          ...entry,
+          playerIds: entry.playerIds.filter((id) => id !== input.playerId)
+        };
+      }
+
+      return entry;
     });
+    const affectedTeams = updatedTeams.filter((entry) => {
+      const previousTeam = data.teams.find((teamEntry) => teamEntry.id === entry.id);
+      return previousTeam?.playerIds.join(",") !== entry.playerIds.join(",");
+    });
+
+    const persistenceResults = await Promise.all([
+      upsertPlayerInSupabase({
+        player: playerForSupabase
+      }),
+      ...affectedTeams.map((updatedTeam) => updateTeamPlayersInSupabase(updatedTeam.id, updatedTeam.playerIds))
+    ]);
+    const [upsertResult, ...teamUpdateResults] = persistenceResults;
 
     if (!upsertResult.data) {
       return {
         success: false,
         error: upsertResult.error ?? "Unable to save player profile."
+      };
+    }
+
+    const failedTeamUpdate = teamUpdateResults.find((result) => !result.data);
+    if (failedTeamUpdate) {
+      return {
+        success: false,
+        error: failedTeamUpdate.error ?? "Unable to update team roster."
       };
     }
 
@@ -1177,34 +1460,13 @@ export const useDataStore = create<DataState>((set, get) => ({
             }
           : entry
       );
-      const teams = state.data.teams.map((entry) => {
-        const shouldContainPlayer = entry.id === input.teamId;
-        const currentlyContainsPlayer = entry.playerIds.includes(input.playerId);
-
-        if (shouldContainPlayer && !currentlyContainsPlayer) {
-          return {
-            ...entry,
-            playerIds: [...entry.playerIds, input.playerId]
-          };
-        }
-
-        if (!shouldContainPlayer && currentlyContainsPlayer) {
-          return {
-            ...entry,
-            playerIds: entry.playerIds.filter((id) => id !== input.playerId)
-          };
-        }
-
-        return entry;
-      });
-
       return {
         playerDirectory: upsertPlayerCollection(state.playerDirectory, syncedPlayer),
         data: {
           ...state.data,
           players,
           users,
-          teams
+          teams: updatedTeams
         }
       };
     });
@@ -1483,14 +1745,51 @@ export const useDataStore = create<DataState>((set, get) => ({
       avatarUrl
     };
 
-    const upsertResult = await upsertPlayerInSupabase({
-      player: playerForSupabase
+    const updatedTeams = data.teams.map((entry) => {
+      const shouldContainPlayer = entry.id === input.teamId;
+      const currentlyContainsPlayer = entry.playerIds.includes(input.playerId);
+
+      if (shouldContainPlayer && !currentlyContainsPlayer) {
+        return {
+          ...entry,
+          playerIds: [...entry.playerIds, input.playerId]
+        };
+      }
+
+      if (!shouldContainPlayer && currentlyContainsPlayer) {
+        return {
+          ...entry,
+          playerIds: entry.playerIds.filter((id) => id !== input.playerId)
+        };
+      }
+
+      return entry;
     });
+    const affectedTeams = updatedTeams.filter((entry) => {
+      const previousTeam = data.teams.find((teamEntry) => teamEntry.id === entry.id);
+      return previousTeam?.playerIds.join(",") !== entry.playerIds.join(",");
+    });
+
+    const persistenceResults = await Promise.all([
+      upsertPlayerInSupabase({
+        player: playerForSupabase
+      }),
+      ...affectedTeams.map((updatedTeam) => updateTeamPlayersInSupabase(updatedTeam.id, updatedTeam.playerIds))
+    ]);
+    const [upsertResult, ...teamUpdateResults] = persistenceResults;
 
     if (!upsertResult.data) {
       return {
         success: false,
         error: upsertResult.error ?? "Unable to save player profile."
+      };
+    }
+
+    const failedTeamUpdate = teamUpdateResults.find((result) => !result.data);
+    if (failedTeamUpdate) {
+      return {
+        success: false,
+        error: failedTeamUpdate.error ?? "Unable to update team roster."
       };
     }
 
@@ -1519,33 +1818,12 @@ export const useDataStore = create<DataState>((set, get) => ({
             }
           : entry
       );
-      const teams = state.data.teams.map((entry) => {
-        const shouldContainPlayer = entry.id === input.teamId;
-        const currentlyContainsPlayer = entry.playerIds.includes(input.playerId);
-
-        if (shouldContainPlayer && !currentlyContainsPlayer) {
-          return {
-            ...entry,
-            playerIds: [...entry.playerIds, input.playerId]
-          };
-        }
-
-        if (!shouldContainPlayer && currentlyContainsPlayer) {
-          return {
-            ...entry,
-            playerIds: entry.playerIds.filter((id) => id !== input.playerId)
-          };
-        }
-
-        return entry;
-      });
-
       return {
         data: {
           ...state.data,
           players,
           users,
-          teams
+          teams: updatedTeams
         }
       };
     });
@@ -1553,14 +1831,17 @@ export const useDataStore = create<DataState>((set, get) => ({
     return { success: true };
   },
   updateParentProfile: async (input) => {
-    const { data } = get();
+    const { data, playerDirectory } = get();
     const parent = data.parents.find((entry) => entry.id === input.parentId);
     if (!parent) {
       return { success: false, error: "Parent not found." };
     }
 
-    const player = data.players.find((entry) => entry.id === input.playerId);
-    if (!player) {
+    const player = input.playerId
+      ? data.players.find((entry) => entry.id === input.playerId) ??
+        playerDirectory.find((entry) => entry.id === input.playerId)
+      : undefined;
+    if (input.playerId && !player) {
       return { success: false, error: "Selected player was not found." };
     }
 
@@ -1569,26 +1850,20 @@ export const useDataStore = create<DataState>((set, get) => ({
       return { success: false, error: "Profile picture is required." };
     }
 
-    const previousPlayerIds = parent.playerIds;
-    const nextPlayerIds = [input.playerId];
-    const affectedPlayers = data.players.filter(
-      (entry) => previousPlayerIds.includes(entry.id) || entry.id === input.playerId
-    );
-    const updatedPlayers = affectedPlayers.map((entry) => {
-      if (entry.id === input.playerId) {
-        return entry.parentIds.includes(input.parentId)
-          ? entry
-          : {
-              ...entry,
-              parentIds: [...entry.parentIds, input.parentId]
-            };
-      }
-
-      return {
-        ...entry,
-        parentIds: entry.parentIds.filter((id) => id !== input.parentId)
-      };
-    });
+    const nextPlayerIds =
+      input.playerId && !parent.playerIds.includes(input.playerId)
+        ? [...parent.playerIds, input.playerId]
+        : parent.playerIds;
+    const updatedPlayers = player
+      ? [
+          player.parentIds.includes(input.parentId)
+            ? player
+            : {
+                ...player,
+                parentIds: [...player.parentIds, input.parentId]
+              }
+        ]
+      : [];
 
     const parentForSupabase: Parent = {
       ...parent,
@@ -1618,40 +1893,55 @@ export const useDataStore = create<DataState>((set, get) => ({
       };
     }
 
-    set((state) => ({
-      data: {
-        ...state.data,
-        parents: state.data.parents.map((entry) =>
-          entry.id === input.parentId
-            ? {
-                ...entry,
-                avatarUrl,
-                playerIds: nextPlayerIds
-              }
-            : entry
-        ),
-        players: state.data.players.map((entry) => {
+    set((state) => {
+      const users = state.data.users.map((entry) => {
+        if (entry.id === input.parentId && entry.role === "parent") {
+          return {
+            ...entry,
+            avatarUrl,
+            playerIds: nextPlayerIds
+          };
+        }
+
+        if (entry.role === "player") {
           const updatedPlayer = updatedPlayers.find((candidate) => candidate.id === entry.id);
           return updatedPlayer ?? entry;
-        }),
-        users: state.data.users.map((entry) => {
-          if (entry.id === input.parentId && entry.role === "parent") {
-            return {
-              ...entry,
-              avatarUrl,
-              playerIds: nextPlayerIds
-            };
-          }
+        }
 
-          if (entry.role === "player") {
-            const updatedPlayer = updatedPlayers.find((candidate) => candidate.id === entry.id);
-            return updatedPlayer ?? entry;
-          }
+        return entry;
+      });
+      const nextUsers = updatedPlayers.reduce((acc, updatedPlayer) => {
+        if (acc.some((entry) => entry.id === updatedPlayer.id && entry.role === "player")) {
+          return acc;
+        }
 
-          return entry;
-        })
-      }
-    }));
+        return [...acc, updatedPlayer];
+      }, users);
+
+      return {
+        playerDirectory: updatedPlayers.reduce(
+          (players, updatedPlayer) => upsertPlayerCollection(players, updatedPlayer),
+          state.playerDirectory
+        ),
+        data: {
+          ...state.data,
+          parents: state.data.parents.map((entry) =>
+            entry.id === input.parentId
+              ? {
+                  ...entry,
+                  avatarUrl,
+                  playerIds: nextPlayerIds
+                }
+              : entry
+          ),
+          players: updatedPlayers.reduce(
+            (players, updatedPlayer) => upsertPlayerCollection(players, updatedPlayer),
+            state.data.players
+          ),
+          users: nextUsers
+        }
+      };
+    });
 
     return { success: true };
   },

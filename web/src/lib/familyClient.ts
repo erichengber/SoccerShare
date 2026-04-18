@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import type { Player, Parent } from "@/types/domain";
+import type { Parent, Player } from "@/types/domain";
 
 interface FamilyClientResult<T> {
   data?: T;
@@ -20,6 +20,15 @@ interface PlayerRow {
   teammate_ids: string[] | null;
   privacy: Player["privacy"] | null;
   bio: string | null;
+}
+
+interface ParentRow {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  player_ids: string[] | null;
 }
 
 interface UpsertPlayerPayload {
@@ -53,6 +62,18 @@ function mapPlayerRowToPlayer(row: PlayerRow): Player {
   };
 }
 
+function mapParentRowToParent(row: ParentRow): Parent {
+  return {
+    id: row.id,
+    role: "parent",
+    firstName: row.first_name?.trim() || "New",
+    lastName: row.last_name?.trim() || "Parent",
+    email: row.email?.trim().toLowerCase() || "",
+    avatarUrl: row.avatar_url?.trim() || "",
+    playerIds: row.player_ids ?? []
+  };
+}
+
 export async function fetchPlayersFromSupabase(): Promise<FamilyClientResult<Player[]>> {
   if (!isSupabaseConfigured || !supabase) {
     return {
@@ -76,6 +97,87 @@ export async function fetchPlayersFromSupabase(): Promise<FamilyClientResult<Pla
 
   return {
     data: (data as PlayerRow[]).map(mapPlayerRowToPlayer)
+  };
+}
+
+export async function fetchPlayerFromSupabase(playerId: string): Promise<FamilyClientResult<Player>> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from("players")
+    .select(
+      "id, first_name, last_name, email, avatar_url, grad_year, position, jersey_number, team_ids, parent_ids, teammate_ids, privacy, bio"
+    )
+    .eq("id", playerId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      error: error.message
+    };
+  }
+
+  if (!data) {
+    return {};
+  }
+
+  return {
+    data: mapPlayerRowToPlayer(data as PlayerRow)
+  };
+}
+
+export async function fetchPlayersByIdsFromSupabase(playerIds: string[]): Promise<FamilyClientResult<Player[]>> {
+  if (!isSupabaseConfigured || !supabase || playerIds.length === 0) {
+    return {
+      data: []
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("players")
+    .select(
+      "id, first_name, last_name, email, avatar_url, grad_year, position, jersey_number, team_ids, parent_ids, teammate_ids, privacy, bio"
+    )
+    .in("id", playerIds)
+    .order("last_name", { ascending: true })
+    .order("first_name", { ascending: true });
+
+  if (error) {
+    return {
+      error: error.message
+    };
+  }
+
+  return {
+    data: (data as PlayerRow[]).map(mapPlayerRowToPlayer)
+  };
+}
+
+export async function fetchParentFromSupabase(parentId: string): Promise<FamilyClientResult<Parent>> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from("parents")
+    .select("id, first_name, last_name, email, avatar_url, player_ids")
+    .eq("id", parentId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      error: error.message
+    };
+  }
+
+  if (!data) {
+    return {};
+  }
+
+  return {
+    data: mapParentRowToParent(data as ParentRow)
   };
 }
 

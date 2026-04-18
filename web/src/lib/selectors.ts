@@ -30,6 +30,10 @@ export function getSchoolName(data: AppData, schoolId?: string) {
   return data.schools.find((school) => school.id === schoolId)?.name;
 }
 
+export function getRosterSize(data: AppData, teamId: string) {
+  return data.players.filter((player) => player.teamIds.includes(teamId)).length;
+}
+
 function isParentLinkedToPlayer(data: AppData, parentId: string, player: Player) {
   const parent = getParentById(data, parentId);
   return parent?.playerIds.includes(player.id) ?? false;

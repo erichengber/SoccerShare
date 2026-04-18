@@ -230,7 +230,7 @@ export function ParentOnboardingPage() {
               </div>
 
               <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
-                This links your parent account to one player now. You can still manage invites and clips after setup.
+                This links your parent account to your first player now. You can add more players later from Manage Players.
               </div>
 
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
