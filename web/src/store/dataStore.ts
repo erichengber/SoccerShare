@@ -100,7 +100,7 @@ interface DataState {
   }) => Promise<void>;
   createCoachTeam: (coachId: string, input: CreateCoachTeamInput) => AsyncActionResult;
   syncCoachTeamFromSupabase: (coachId: string) => AsyncActionResult;
-  invitePlayerToTeam: (coachId: string, playerId: string) => AsyncActionResult;
+  invitePlayerToTeam: (coachId: string, playerId: string, teamId: string) => AsyncActionResult;
   respondToTeamInvite: (input: TeamInviteResponseInput) => AsyncActionResult;
   addCoachGame: (coachId: string, input: CoachGameInput) => AsyncActionResult;
   addCoachTournament: (coachId: string, input: CoachTournamentInput) => AsyncActionResult;
@@ -868,14 +868,21 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     return { success: true };
   },
-  invitePlayerToTeam: async (coachId, playerId) => {
+  invitePlayerToTeam: async (coachId, playerId, teamId) => {
     const { data } = get();
     const coach = data.coaches.find((entry) => entry.id === coachId);
     if (!coach) {
       return { success: false, error: "Coach not found." };
     }
-    if (!coach.teamId) {
-      return { success: false, error: "Create a team before inviting players." };
+
+    const targetTeam = data.teams.find((entry) => entry.id === teamId);
+    if (!targetTeam) {
+      return { success: false, error: "Selected team not found." };
+    }
+
+    const canInviteForTeam = targetTeam.coachIds.includes(coachId) || coach.teamId === teamId;
+    if (!canInviteForTeam) {
+      return { success: false, error: "You can only invite players to a team you coach." };
     }
 
     const player = data.players.find((entry) => entry.id === playerId);
@@ -883,14 +890,14 @@ export const useDataStore = create<DataState>((set, get) => ({
       return { success: false, error: "Player not found." };
     }
 
-    if (player.teamIds.includes(coach.teamId)) {
+    if (player.teamIds.includes(teamId)) {
       return { success: false, error: "Player is already on this team." };
     }
 
     const hasPendingInvite = data.teamInvites.some(
       (invite) =>
         invite.playerId === playerId &&
-        invite.teamId === coach.teamId &&
+        invite.teamId === teamId &&
         invite.status === "pending"
     );
     if (hasPendingInvite) {
@@ -905,7 +912,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     const createResult = await createTeamInviteInSupabase({
       id: inviteId,
-      teamId: coach.teamId,
+      teamId,
       playerId,
       invitedByCoachId: coachId,
       status: "pending",

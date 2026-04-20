@@ -130,7 +130,7 @@ export interface SampleVideoOption {
 
 export type TeamInviteStatus = "pending" | "accepted" | "declined";
 
-export type TeamInviteResponderRole = "player" | "parent";
+export type TeamInviteResponderRole = "player";
 
 export interface TeamInvite {
   id: string;
